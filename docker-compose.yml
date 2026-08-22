@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: recon_user
+      POSTGRES_PASSWORD: recon_pass
+      POSTGRES_DB: reconciliation_investigator
+    ports:
+      - "5432:5432"
+    volumes:
+      - recon_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recon_user -d reconciliation_investigator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  recon_pgdata:
