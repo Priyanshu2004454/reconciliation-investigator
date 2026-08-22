@@ -1,0 +1,46 @@
+import enum
+
+
+class ReconciliationStatus(str, enum.Enum):
+    MATCHED = "MATCHED"
+    EXPLAINED = "EXPLAINED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    FALSE_POSITIVE = "FALSE_POSITIVE"
+    RESOLVED = "RESOLVED"
+
+
+class RootCauseCategory(str, enum.Enum):
+    FEE_TAX = "FEE_TAX"
+    REFUND = "REFUND"
+    MISSING_BANK_CREDIT = "MISSING_BANK_CREDIT"
+    DUPLICATE = "DUPLICATE"
+    TIMING_DIFFERENCE = "TIMING_DIFFERENCE"
+    AMOUNT_MISMATCH = "AMOUNT_MISMATCH"
+    UNKNOWN = "UNKNOWN"
+
+
+class RecordSource(str, enum.Enum):
+    RAZORPAY_PAYMENT = "RAZORPAY_PAYMENT"
+    RAZORPAY_ORDER = "RAZORPAY_ORDER"
+    RAZORPAY_REFUND = "RAZORPAY_REFUND"
+    RAZORPAY_SETTLEMENT = "RAZORPAY_SETTLEMENT"
+    BANK_STATEMENT = "BANK_STATEMENT"
+
+
+class WebhookProcessingStatus(str, enum.Enum):
+    RECEIVED = "RECEIVED"
+    PROCESSED = "PROCESSED"
+    FAILED = "FAILED"
+    DUPLICATE = "DUPLICATE"
+
+
+class AuditActor(str, enum.Enum):
+    AI = "AI"
+    HUMAN = "HUMAN"
+    SYSTEM = "SYSTEM"
+
+
+class HumanDecision(str, enum.Enum):
+    RESOLVED = "RESOLVED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    REJECTED = "REJECTED"

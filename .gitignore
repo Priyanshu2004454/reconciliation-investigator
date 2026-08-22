@@ -1,0 +1,28 @@
+# Env / secrets
+.env
+.env.local
+*.env
+!*.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# DB
+*.sqlite3
+
+# OS
+.DS_Store
+
+# Logs
+*.log
