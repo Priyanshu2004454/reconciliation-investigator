@@ -1,7 +1,9 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
+setuptools>=70.0.0,<81
 pydantic==2.9.2
 pydantic-settings==2.5.2
+email-validator==2.2.0
 sqlalchemy==2.0.35
 alembic==1.13.3
 asyncpg==0.29.0

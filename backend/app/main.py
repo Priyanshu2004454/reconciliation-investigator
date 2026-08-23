@@ -1,15 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.core.config import get_settings
+from app.api.v1 import auth, merchant_accounts, razorpay_routes, bank_statements, reconciliation, investigations, dashboard, audit
 
 settings = get_settings()
+
+limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
 app = FastAPI(
     title="Reconciliation Investigator",
     description="AI-powered financial reconciliation investigator for Razorpay merchants.",
     version="0.1.0",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +38,11 @@ async def health_check():
     }
 
 
-# Routers are added incrementally as each phase is built:
-# from app.api.v1 import razorpay, bank_statements, reconciliation, investigations, audit
-# app.include_router(razorpay.router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(merchant_accounts.router, prefix=settings.API_V1_PREFIX)
+app.include_router(razorpay_routes.router, prefix=settings.API_V1_PREFIX)
+app.include_router(bank_statements.router, prefix=settings.API_V1_PREFIX)
+app.include_router(reconciliation.router, prefix=settings.API_V1_PREFIX)
+app.include_router(investigations.router, prefix=settings.API_V1_PREFIX)
+app.include_router(dashboard.router, prefix=settings.API_V1_PREFIX)
+app.include_router(audit.router, prefix=settings.API_V1_PREFIX)

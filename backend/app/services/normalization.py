@@ -10,17 +10,22 @@ from datetime import datetime, timezone
 from app.schemas.financial import NormalizedRecord
 
 
-def _paise_to_rupees(amount_paise: int | None) -> float:
+def paise_to_rupees(amount_paise: int | None) -> float:
     """Razorpay amounts are in paise (smallest currency unit). Convert to rupees."""
     if amount_paise is None:
         return 0.0
     return round(amount_paise / 100, 2)
 
 
-def _unix_to_datetime(ts: int | None) -> datetime:
+def unix_to_datetime(ts: int | None) -> datetime:
     if ts is None:
         raise ValueError("Missing timestamp in Razorpay record — cannot normalize.")
     return datetime.fromtimestamp(ts, tz=timezone.utc)
+
+
+# Internal aliases kept for backward compatibility within this module.
+_paise_to_rupees = paise_to_rupees
+_unix_to_datetime = unix_to_datetime
 
 
 def normalize_payment(raw: dict) -> NormalizedRecord:
