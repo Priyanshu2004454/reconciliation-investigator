@@ -1,0 +1,168 @@
+// Mirrors backend/app/schemas/*.py — keep these in sync with the API contracts.
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface MerchantAccount {
+  id: string;
+  business_name: string;
+  razorpay_key_id: string;
+  is_test_mode: boolean;
+}
+
+export interface SyncResult {
+  source: string;
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+  duration_ms: number;
+}
+
+export interface BankRowError {
+  row_number: number;
+  reason: string;
+  raw_row: Record<string, unknown>;
+}
+
+export interface ImportSummary {
+  import_batch_id: string;
+  filename: string;
+  total_rows: number;
+  rows_imported: number;
+  rows_rejected: number;
+  rows_duplicated: number;
+  rows_requiring_review: number;
+  detected_columns: Record<string, string>;
+  errors: BankRowError[];
+}
+
+export type ReconciliationStatus =
+  | "MATCHED"
+  | "EXPLAINED"
+  | "NEEDS_REVIEW"
+  | "FALSE_POSITIVE"
+  | "RESOLVED";
+
+export interface ReconciliationRunSummary {
+  run_id: string;
+  status: string;
+  total_transactions: number;
+  matched: number;
+  explained: number;
+  needs_review: number;
+}
+
+export interface ReconciliationCaseListItem {
+  id: string;
+  razorpay_settlement_id: string | null;
+  status: ReconciliationStatus;
+  match_rule: string | null;
+  expected_amount: number | null;
+  actual_amount: number | null;
+  difference: number | null;
+  updated_at: string;
+}
+
+export interface ReconciliationCaseDetail extends ReconciliationCaseListItem {
+  razorpay_payment_id: string | null;
+  bank_transaction_id: string | null;
+  created_at: string;
+}
+
+export interface EvidenceItem {
+  source_type: string;
+  source_id: string;
+  description: string;
+}
+
+export type RootCause =
+  | "FEE_TAX"
+  | "REFUND"
+  | "MISSING_BANK_CREDIT"
+  | "DUPLICATE"
+  | "TIMING_DIFFERENCE"
+  | "AMOUNT_MISMATCH"
+  | "UNKNOWN";
+
+export type HumanDecision = "RESOLVED" | "NEEDS_REVIEW" | "REJECTED";
+
+export interface Investigation {
+  id: string;
+  case_id: string;
+  classification: ReconciliationStatus;
+  root_cause: RootCause;
+  explanation: string;
+  confidence: number;
+  recommended_action: string;
+  requires_human_review: boolean;
+  human_decision: HumanDecision | null;
+  human_notes?: string | null;
+  evidence: EvidenceItem[];
+  created_at: string;
+}
+
+export interface DashboardSummary {
+  total_transactions: number;
+  processed_value: number;
+  total_settlements: number;
+  matched_count: number;
+  explained_count: number;
+  needs_review_count: number;
+  reconciliation_rate: number;
+  amount_requiring_investigation: number;
+  last_run_at: string | null;
+  last_run_status: string | null;
+}
+
+export interface RecentActivityItem {
+  case_id: string;
+  razorpay_settlement_id: string | null;
+  status: ReconciliationStatus;
+  root_cause: string | null;
+  amount: number | null;
+  updated_at: string;
+}
+
+export interface MismatchCategoryBreakdown {
+  category: string;
+  count: number;
+  total_amount: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  case_id: string | null;
+  actor_type: "AI" | "HUMAN" | "SYSTEM";
+  actor_id: string | null;
+  action: string;
+  previous_state: Record<string, unknown> | null;
+  new_state: Record<string, unknown> | null;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface HealthCheck {
+  status: string;
+  app_env: string;
+  config: {
+    APP_ENV: string;
+    API_V1_PREFIX: string;
+    RAZORPAY_KEY_ID: string;
+    RAZORPAY_KEY_SECRET: string;
+    ANTHROPIC_API_KEY: string;
+    JWT_SECRET_KEY: string;
+    AI_MODEL: string;
+    MATCH_DATE_WINDOW_DAYS: number;
+  };
+}

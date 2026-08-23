@@ -19,11 +19,66 @@ from app.api.deps import get_current_merchant_account, get_current_user
 from app.db.session import get_db
 from app.models.reconciliation import ReconciliationCase, Investigation, InvestigationEvidence
 from app.models.users import MerchantAccount, User
-from app.schemas.investigation_api import InvestigationOut, HumanDecisionRequest
+from app.schemas.investigation_api import InvestigationOut, HumanDecisionRequest, EvidenceOut
 from app.services import audit_service
 
 router = APIRouter(prefix="/investigations", tags=["investigations"])
 limiter = Limiter(key_func=get_remote_address)
+
+
+async def _load_investigation_with_evidence(db: AsyncSession, investigation: Investigation) -> dict:
+    evidence_rows = (
+        await db.execute(
+            select(InvestigationEvidence).where(InvestigationEvidence.investigation_id == investigation.id)
+        )
+    ).scalars().all()
+    return {
+        "id": investigation.id, "case_id": investigation.case_id,
+        "classification": investigation.classification, "root_cause": investigation.root_cause,
+        "explanation": investigation.explanation, "confidence": investigation.confidence,
+        "recommended_action": investigation.recommended_action,
+        "requires_human_review": investigation.requires_human_review,
+        "human_decision": investigation.human_decision, "human_notes": investigation.human_notes,
+        "evidence": [
+            EvidenceOut(source_type=e.source_type, source_id=e.source_id, description=e.description)
+            for e in evidence_rows
+        ],
+        "created_at": investigation.created_at,
+    }
+
+
+@router.get("/cases/{case_id}", response_model=InvestigationOut | None)
+async def get_latest_investigation_for_case(
+    case_id: uuid.UUID,
+    merchant: MerchantAccount = Depends(get_current_merchant_account),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    NEW in this phase (additive, read-only): lets the frontend show a
+    previously-run investigation without re-triggering the AI (which costs
+    time and tokens) every time the case detail page loads.
+    """
+    case = (
+        await db.execute(
+            select(ReconciliationCase).where(
+                ReconciliationCase.id == case_id, ReconciliationCase.merchant_account_id == merchant.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if case is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
+
+    investigation = (
+        await db.execute(
+            select(Investigation)
+            .where(Investigation.case_id == case_id)
+            .order_by(Investigation.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if investigation is None:
+        return None
+    return await _load_investigation_with_evidence(db, investigation)
 
 
 @router.post("/cases/{case_id}/investigate", response_model=InvestigationOut, status_code=status.HTTP_201_CREATED)
@@ -114,7 +169,7 @@ async def investigate(
 
     await db.commit()
     await db.refresh(investigation)
-    return investigation
+    return await _load_investigation_with_evidence(db, investigation)
 
 
 @router.post("/{investigation_id}/decision", response_model=InvestigationOut)
@@ -168,4 +223,4 @@ async def submit_human_decision(
 
     await db.commit()
     await db.refresh(investigation)
-    return investigation
+    return await _load_investigation_with_evidence(db, investigation)

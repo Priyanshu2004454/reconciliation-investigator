@@ -5,6 +5,12 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 
+class EvidenceOut(BaseModel):
+    source_type: str
+    source_id: str
+    description: str
+
+
 class InvestigationOut(BaseModel):
     id: uuid.UUID
     case_id: uuid.UUID
@@ -15,6 +21,8 @@ class InvestigationOut(BaseModel):
     recommended_action: str
     requires_human_review: bool
     human_decision: Optional[str] = None
+    human_notes: Optional[str] = None
+    evidence: list[EvidenceOut] = []
     created_at: datetime
 
     class Config:

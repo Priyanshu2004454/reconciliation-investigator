@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #0E1013;
+  --color-surface: #161920;
+  --color-surface-hover: #1D212A;
+  --color-border: #272B34;
+  --color-border-strong: #363B47;
+  --color-text-primary: #E7E9ED;
+  --color-text-secondary: #9199A8;
+  --color-text-muted: #666D7C;
+
+  --color-matched: #34D399;
+  --color-matched-bg: #0F2A22;
+  --color-explained: #60A5FA;
+  --color-explained-bg: #10233F;
+  --color-review: #F2B84B;
+  --color-review-bg: #332508;
+  --color-critical: #F1685C;
+  --color-critical-bg: #331411;
+
+  --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-matched: var(--color-matched);
+  --color-matched-bg: var(--color-matched-bg);
+  --color-explained: var(--color-explained);
+  --color-explained-bg: var(--color-explained-bg);
+  --color-review: var(--color-review);
+  --color-review-bg: var(--color-review-bg);
+  --color-critical: var(--color-critical);
+  --color-critical-bg: var(--color-critical-bg);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-explained);
+  color: #0E1013;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-explained);
+  outline-offset: 2px;
+}
+
+/* Tabular numerals everywhere money/counts appear */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
