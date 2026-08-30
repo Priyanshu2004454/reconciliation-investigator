@@ -2,6 +2,7 @@ import type {
   AuditLogEntry,
   DashboardSummary,
   DemoSeedResponse,
+  ExceptionCase,
   HealthCheck,
   ImportSummary,
   Investigation,
@@ -9,6 +10,7 @@ import type {
   MismatchCategoryBreakdown,
   ReconciliationCaseDetail,
   ReconciliationCaseListItem,
+  ReconciliationRun,
   ReconciliationRunSummary,
   RecentActivityItem,
   SyncResult,
@@ -147,6 +149,19 @@ export function listCases(statusFilter?: string, runId?: string) {
 
 export function getCase(caseId: string) {
   return request<ReconciliationCaseDetail>(`/reconciliation/cases/${caseId}`);
+}
+
+// Real, already-tested backend endpoints (Track 04 batch reconciliation) that
+// this frontend fork hadn't wired up yet -- added here (read-only GETs) so
+// the Overview dashboard can show real run history and exceptions instead
+// of inventing chart data.
+export function listReconciliationRuns(limit = 10) {
+  return request<ReconciliationRun[]>(`/reconciliation/runs?limit=${limit}`);
+}
+
+export function listExceptions(runId?: string) {
+  const qs = runId ? `?run_id=${encodeURIComponent(runId)}` : "";
+  return request<ExceptionCase[]>(`/reconciliation/exceptions${qs}`);
 }
 
 // ── Investigations ───────────────────────────────────────────────────────

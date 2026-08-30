@@ -203,6 +203,34 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
+export interface ReconciliationRun {
+  id: string;
+  status: string;
+  total_records: number;
+  matched_records: number;
+  explained_records: number;
+  unresolved_records: number;
+  failed_records: number;
+  total_amount: number;
+  matched_amount: number;
+  unresolved_amount: number;
+  match_rate: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface ExceptionCase {
+  case_id: string;
+  razorpay_payment_id: string | null;
+  razorpay_settlement_id: string | null;
+  amount: number | null;
+  status: string;
+  mismatch_type: string | null;
+  confidence: number | null;
+  recommended_action: string | null;
+  created_at: string;
+}
+
 export interface HealthCheck {
   status: string;
   app_env: string;
