@@ -72,3 +72,16 @@ class SyncResult(BaseModel):
     skipped: int
     errors: list[str] = []
     duration_ms: int
+
+
+class DemoSeedResponse(BaseModel):
+    merchant_account_id: str
+    records_created: int
+    records_existing: int
+    payments_count: int
+    settlements_count: int
+    refunds_count: int
+    bank_transactions_count: int
+    total_records: int
+    counts: dict[str, int]
+

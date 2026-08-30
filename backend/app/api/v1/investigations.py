@@ -9,8 +9,7 @@ from fastapi import Request
 
 from app.ai.client import get_ai_client, AIClientNotConfiguredError
 from app.ai.db_data_store import DbInvestigationStore
-from app.ai.investigator import (
-    investigate_case,
+from app.ai.providers import (
     InvestigationError,
     InvestigationHallucinationError,
     InvestigationTimeoutError,
@@ -45,6 +44,60 @@ async def _load_investigation_with_evidence(db: AsyncSession, investigation: Inv
         ],
         "created_at": investigation.created_at,
     }
+
+
+async def _run_single_investigation(db: AsyncSession, merchant: MerchantAccount, case: ReconciliationCase) -> dict:
+    """
+    Shared investigation logic used by both the single-case endpoint and the
+    batch endpoint. Raises the same InvestigationError family as investigate_case
+    itself (or AIClientNotConfiguredError) — callers decide how to surface that
+    (HTTP error for the single endpoint, a per-case failure entry for batch).
+    """
+    client = get_ai_client()
+    store = DbInvestigationStore(db, merchant.id)
+
+    await audit_service.log_action(
+        db, actor_type="AI", action="INVESTIGATION_STARTED", case_id=case.id, actor_id="ai-investigator",
+    )
+
+    run_result = await client.investigate(str(case.id), store)
+
+    result = run_result.result
+    investigation = Investigation(
+        case_id=case.id,
+        classification=result.classification,
+        root_cause=result.root_cause,
+        explanation=result.explanation,
+        confidence=result.confidence,
+        recommended_action=result.recommended_action,
+        requires_human_review=result.requires_human_review,
+        ai_model=run_result.ai_model,
+        raw_ai_response=run_result.raw_final_input,
+        duration_ms=run_result.duration_ms,
+    )
+    db.add(investigation)
+    await db.flush()
+
+    for item in result.evidence:
+        db.add(InvestigationEvidence(
+            investigation_id=investigation.id,
+            source_type=item.source_type,
+            source_id=item.source_id,
+            description=item.description,
+            data_snapshot={},
+        ))
+
+    await audit_service.log_action(
+        db, actor_type="AI", action="INVESTIGATION_COMPLETED", case_id=case.id, actor_id="ai-investigator",
+        new_state={
+            "classification": result.classification, "root_cause": result.root_cause,
+            "confidence": result.confidence, "tool_calls": len(run_result.tool_calls),
+        },
+    )
+
+    await db.commit()
+    await db.refresh(investigation)
+    return await _load_investigation_with_evidence(db, investigation)
 
 
 @router.get("/cases/{case_id}", response_model=InvestigationOut | None)
@@ -100,18 +153,9 @@ async def investigate(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
 
     try:
-        client = get_ai_client()
+        return await _run_single_investigation(db, merchant, case)
     except AIClientNotConfiguredError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-
-    store = DbInvestigationStore(db, merchant.id)
-
-    await audit_service.log_action(
-        db, actor_type="AI", action="INVESTIGATION_STARTED", case_id=case.id, actor_id="ai-investigator",
-    )
-
-    try:
-        run_result = await investigate_case(str(case.id), store, client)
     except InvestigationTimeoutError as exc:
         await audit_service.log_action(
             db, actor_type="AI", action="INVESTIGATION_TIMEOUT", case_id=case.id, reason=str(exc),
@@ -134,42 +178,66 @@ async def investigate(
         await db.commit()
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI investigation failed") from exc
 
-    result = run_result.result
-    investigation = Investigation(
-        case_id=case.id,
-        classification=result.classification,
-        root_cause=result.root_cause,
-        explanation=result.explanation,
-        confidence=result.confidence,
-        recommended_action=result.recommended_action,
-        requires_human_review=result.requires_human_review,
-        ai_model="claude-sonnet-4-6",
-        raw_ai_response=run_result.raw_final_input,
-        duration_ms=run_result.duration_ms,
+
+@router.post("/batch-investigate")
+async def batch_investigate(
+    run_id: uuid.UUID | None = None,
+    limit: int = 20,
+    merchant: MerchantAccount = Depends(get_current_merchant_account),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Investigates every NEEDS_REVIEW case (optionally scoped to one
+    reconciliation run) that doesn't already have an investigation, up to
+    `limit` cases per call. Each case is processed independently — one
+    case's AI failure (timeout, hallucination, etc.) never stops the batch;
+    it's simply recorded as a failure and the batch continues, matching
+    section 24's "never crash the whole app over one bad record".
+    """
+    try:
+        get_ai_client()
+    except AIClientNotConfiguredError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+    already_investigated_subq = select(Investigation.case_id).distinct()
+
+    stmt = (
+        select(ReconciliationCase)
+        .where(
+            ReconciliationCase.merchant_account_id == merchant.id,
+            ReconciliationCase.status == "NEEDS_REVIEW",
+            ReconciliationCase.id.not_in(already_investigated_subq),
+        )
+        .order_by(ReconciliationCase.created_at.asc())
+        .limit(limit)
     )
-    db.add(investigation)
-    await db.flush()
+    if run_id:
+        stmt = stmt.where(ReconciliationCase.run_id == run_id)
 
-    for item in result.evidence:
-        db.add(InvestigationEvidence(
-            investigation_id=investigation.id,
-            source_type=item.source_type,
-            source_id=item.source_id,
-            description=item.description,
-            data_snapshot={},
-        ))
+    cases = (await db.execute(stmt)).scalars().all()
 
-    await audit_service.log_action(
-        db, actor_type="AI", action="INVESTIGATION_COMPLETED", case_id=case.id, actor_id="ai-investigator",
-        new_state={
-            "classification": result.classification, "root_cause": result.root_cause,
-            "confidence": result.confidence, "tool_calls": len(run_result.tool_calls),
-        },
-    )
+    investigated: list[dict] = []
+    failed: list[dict] = []
 
-    await db.commit()
-    await db.refresh(investigation)
-    return await _load_investigation_with_evidence(db, investigation)
+    for case in cases:
+        try:
+            result = await _run_single_investigation(db, merchant, case)
+            investigated.append({"case_id": str(case.id), "classification": result["classification"]})
+        except Exception as exc:  # noqa: BLE001 — one bad case must not stop the batch
+            await db.rollback()
+            await audit_service.log_action(
+                db, actor_type="AI", action="INVESTIGATION_FAILED", case_id=case.id, reason=str(exc),
+            )
+            await db.commit()
+            failed.append({"case_id": str(case.id), "error": str(exc)})
+
+    return {
+        "cases_considered": len(cases),
+        "investigated": len(investigated),
+        "failed": len(failed),
+        "results": investigated,
+        "failures": failed,
+    }
 
 
 @router.post("/{investigation_id}/decision", response_model=InvestigationOut)

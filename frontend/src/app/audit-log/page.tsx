@@ -9,9 +9,15 @@ import { ApiError } from "@/lib/api";
 import type { AuditLogEntry } from "@/lib/types";
 
 const ACTOR_COLORS: Record<string, string> = {
-  AI: "var(--color-explained)",
+  AI: "var(--color-ai-accent)",
   HUMAN: "var(--color-matched)",
   SYSTEM: "var(--color-text-muted)",
+};
+
+const ACTOR_BG: Record<string, string> = {
+  AI: "var(--color-ai-accent-bg)",
+  HUMAN: "var(--color-matched-bg)",
+  SYSTEM: "var(--color-surface-hover)",
 };
 
 export default function AuditLogPage() {
@@ -40,7 +46,7 @@ export default function AuditLogPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Audit Log"
+        title="Reports"
         description="Every AI and human action, in order. This trail is immutable from the UI."
       />
 
@@ -48,7 +54,7 @@ export default function AuditLogPage() {
         <EmptyState title="No merchant account connected yet" description="Connect one in Settings first." />
       )}
 
-      {merchantAccount && loading && <LoadingState label="Loading audit log…" />}
+      {merchantAccount && loading && <LoadingState label="Loading audit trail…" />}
       {merchantAccount && error && <ErrorState message={error} />}
 
       {merchantAccount && !loading && !error && logs.length === 0 && (
@@ -59,8 +65,8 @@ export default function AuditLogPage() {
         <Card>
           <div className="divide-y divide-[var(--color-border)]">
             {logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-4 px-5 py-3">
-                <div className="w-36 shrink-0 font-mono text-[11px] tabular text-[var(--color-text-muted)]">
+              <div key={log.id} className="flex items-start gap-4 px-5 py-3.5">
+                <div className="w-32 shrink-0 text-[11px] tabular text-[var(--color-text-muted)]">
                   {new Date(log.created_at).toLocaleString("en-IN", {
                     day: "2-digit",
                     month: "short",
@@ -70,16 +76,16 @@ export default function AuditLogPage() {
                   })}
                 </div>
                 <span
-                  className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: ACTOR_COLORS[log.actor_type] ?? "var(--color-text-muted)" }}
+                  className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+                  style={{ color: ACTOR_COLORS[log.actor_type] ?? "var(--color-text-muted)", backgroundColor: ACTOR_BG[log.actor_type] ?? "var(--color-surface-hover)" }}
                 >
                   {log.actor_type}
                 </span>
                 <div className="flex-1">
-                  <div className="text-sm text-[var(--color-text-primary)]">{log.action.replace(/_/g, " ")}</div>
+                  <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{log.action.replace(/_/g, " ")}</div>
                   {log.reason && <div className="mt-0.5 text-xs text-[var(--color-text-secondary)]">{log.reason}</div>}
                   {log.case_id && (
-                    <div className="mt-0.5 font-mono text-[10px] text-[var(--color-text-muted)]">
+                    <div className="mt-0.5 text-[11px] tabular text-[var(--color-text-muted)]">
                       case: {log.case_id.slice(0, 8)}
                     </div>
                   )}

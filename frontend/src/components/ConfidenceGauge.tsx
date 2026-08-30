@@ -1,26 +1,39 @@
 export function ConfidenceGauge({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color =
-    value >= 0.8 ? "var(--color-matched)" : value >= 0.5 ? "var(--color-review)" : "var(--color-critical)";
+
+  let label = "Low confidence";
+  let color = "var(--color-critical)";
+  let bg = "var(--color-critical-bg)";
+
+  if (pct >= 85) {
+    label = "High confidence";
+    color = "var(--color-matched)";
+    bg = "var(--color-matched-bg)";
+  } else if (pct >= 60) {
+    label = "Medium confidence";
+    color = "var(--color-review)";
+    bg = "var(--color-review-bg)";
+  }
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative h-2 flex-1 rounded-sm bg-[var(--color-surface-hover)]">
-        {[20, 40, 60, 80].map((tick) => (
-          <span
-            key={tick}
-            className="absolute top-0 h-full w-px bg-[var(--color-bg)]"
-            style={{ left: `${tick}%` }}
-          />
-        ))}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span
+          className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+          style={{ color, backgroundColor: bg }}
+        >
+          {label}
+        </span>
+        <span className="text-sm font-semibold tabular" style={{ color }}>
+          {pct}%
+        </span>
+      </div>
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-hover)]">
         <div
-          className="h-full rounded-sm transition-[width]"
+          className="h-full rounded-full transition-all duration-300"
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
-      <span className="font-mono text-sm tabular font-medium" style={{ color }}>
-        {pct}%
-      </span>
     </div>
   );
 }

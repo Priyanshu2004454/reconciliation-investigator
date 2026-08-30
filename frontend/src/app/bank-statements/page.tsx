@@ -36,7 +36,7 @@ export default function BankStatementsPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Bank Statements"
+        title="Data Imports"
         description="Upload a bank statement CSV to match against Razorpay settlements. Column names are auto-detected."
       />
 
@@ -54,7 +54,7 @@ export default function BankStatementsPage() {
                 type="file"
                 accept=".csv"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="flex-1 text-sm text-[var(--color-text-secondary)] file:mr-3 file:rounded-sm file:border file:border-[var(--color-border-strong)] file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-[var(--color-text-primary)]"
+                className="flex-1 text-sm text-[var(--color-text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[var(--color-border-strong)] file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--color-text-primary)]"
               />
               <Button onClick={handleUpload} disabled={!file || uploading}>
                 {uploading ? "Uploading…" : "Upload"}
@@ -81,12 +81,12 @@ export default function BankStatementsPage() {
               </div>
 
               <Card className="p-5">
-                <div className="mb-3 text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                <div className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">
                   Detected Column Mapping
                 </div>
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                   {Object.entries(summary.detected_columns).map(([field, original]) => (
-                    <div key={field} className="font-mono text-xs">
+                    <div key={field} className="text-xs">
                       <span className="text-[var(--color-text-muted)]">{field}</span>
                       <span className="mx-1.5 text-[var(--color-text-muted)]">←</span>
                       <span className="text-[var(--color-text-primary)]">{original}</span>
@@ -97,12 +97,10 @@ export default function BankStatementsPage() {
 
               {summary.errors.length > 0 && (
                 <Card className="p-5">
-                  <div className="mb-3 text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Row Errors
-                  </div>
+                  <div className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">Row Errors</div>
                   <div className="space-y-1.5">
                     {summary.errors.slice(0, 20).map((e, i) => (
-                      <div key={i} className="font-mono text-xs text-[var(--color-critical)]">
+                      <div key={i} className="text-xs text-[var(--color-critical)]">
                         Row {e.row_number}: {e.reason}
                       </div>
                     ))}
@@ -124,9 +122,9 @@ export default function BankStatementsPage() {
 
 function SummaryTile({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className="rounded-sm border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">{label}</div>
-      <div className="mt-1 font-mono text-xl tabular font-semibold" style={{ color: accent }}>
+    <div className="card-shadow rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5">
+      <div className="text-[11px] font-medium text-[var(--color-text-muted)]">{label}</div>
+      <div className="mt-1 text-xl tabular font-semibold" style={{ color: accent }}>
         {value}
       </div>
     </div>

@@ -20,6 +20,11 @@ class ReconciliationRun(Base):
     matched_count: Mapped[int] = mapped_column(default=0)
     explained_count: Mapped[int] = mapped_column(default=0)
     needs_review_count: Mapped[int] = mapped_column(default=0)
+    failed_count: Mapped[int] = mapped_column(default=0)
+    total_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
+    matched_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
+    unresolved_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
+    match_rate: Mapped[float] = mapped_column(default=0.0)  # percentage, e.g. 92.0
     status: Mapped[str] = mapped_column(String(32), default="RUNNING")  # RUNNING | COMPLETED | FAILED
 
 

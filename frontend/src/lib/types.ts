@@ -29,6 +29,18 @@ export interface SyncResult {
   duration_ms: number;
 }
 
+export interface DemoSeedResponse {
+  merchant_account_id: string;
+  records_created: number;
+  records_existing: number;
+  payments_count: number;
+  settlements_count: number;
+  refunds_count: number;
+  bank_transactions_count: number;
+  total_records: number;
+  counts: Record<string, number>;
+}
+
 export interface BankRowError {
   row_number: number;
   reason: string;
@@ -74,10 +86,49 @@ export interface ReconciliationCaseListItem {
   updated_at: string;
 }
 
+export interface SettlementEvidence {
+  utr: string | null;
+  amount: number | null;
+  fees: number | null;
+  tax: number | null;
+  status: string | null;
+  settlement_date: string | null;
+}
+
+export interface PaymentEvidence {
+  amount: number | null;
+  fee: number | null;
+  tax: number | null;
+  method: string | null;
+  status: string | null;
+  payment_date: string | null;
+}
+
+export interface BankTxnEvidence {
+  utr: string | null;
+  reference_id: string | null;
+  credit: number | null;
+  debit: number | null;
+  transaction_date: string | null;
+  description: string | null;
+}
+
+export interface RefundEvidence {
+  id: string;
+  razorpay_refund_id: string;
+  amount: number;
+  status: string;
+  refund_date: string | null;
+}
+
 export interface ReconciliationCaseDetail extends ReconciliationCaseListItem {
   razorpay_payment_id: string | null;
   bank_transaction_id: string | null;
   created_at: string;
+  settlement_details?: SettlementEvidence | null;
+  payment_details?: PaymentEvidence | null;
+  bank_transaction_details?: BankTxnEvidence | null;
+  refunds?: RefundEvidence[];
 }
 
 export interface EvidenceItem {
@@ -161,6 +212,8 @@ export interface HealthCheck {
     RAZORPAY_KEY_ID: string;
     RAZORPAY_KEY_SECRET: string;
     ANTHROPIC_API_KEY: string;
+    GEMINI_API_KEY?: string;
+    AI_PROVIDER?: string;
     JWT_SECRET_KEY: string;
     AI_MODEL: string;
     MATCH_DATE_WINDOW_DAYS: number;

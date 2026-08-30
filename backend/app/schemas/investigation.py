@@ -7,6 +7,13 @@ ROOT_CAUSES = {
     "FEE_TAX", "REFUND", "MISSING_BANK_CREDIT", "DUPLICATE",
     "TIMING_DIFFERENCE", "AMOUNT_MISMATCH", "UNKNOWN",
 }
+# Must exactly match the (source_type, source_id) pairs recorded by
+# track_fetched_ids() in app/ai/providers.py — these are the only source_type
+# spellings the hallucination guard will ever recognize as "genuinely fetched".
+SOURCE_TYPES = {
+    "RAZORPAY_PAYMENT", "RAZORPAY_SETTLEMENT", "RAZORPAY_REFUND",
+    "BANK_STATEMENT", "RECONCILIATION_CASE",
+}
 
 
 class EvidenceItem(BaseModel):
@@ -19,6 +26,13 @@ class EvidenceItem(BaseModel):
     source_type: str  # RecordSource value, e.g. "RAZORPAY_SETTLEMENT"
     source_id: str
     description: str
+
+    @field_validator("source_type")
+    @classmethod
+    def validate_source_type(cls, v: str) -> str:
+        if v not in SOURCE_TYPES:
+            raise ValueError(f"source_type must be one of {SOURCE_TYPES}, got '{v}'")
+        return v
 
 
 class AIInvestigationResult(BaseModel):

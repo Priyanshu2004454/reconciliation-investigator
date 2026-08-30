@@ -16,8 +16,8 @@ export function StatusStamp({ status }: { status: ReconciliationStatus | string 
   };
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-[11px] font-mono font-medium uppercase tracking-wider"
-      style={{ color: style.color, borderColor: style.color, backgroundColor: style.bg }}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+      style={{ color: style.color, backgroundColor: style.bg }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: style.color }} />
       {style.label}

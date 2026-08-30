@@ -25,14 +25,18 @@ function formatRupees(n: number | null): string {
 }
 
 export default function ReconciliationPage() {
-  const { merchantAccount } = useAuth();
+  const { merchantAccount, refreshMerchantAccount } = useAuth();
   const [cases, setCases] = useState<ReconciliationCaseListItem[]>([]);
   const [filter, setFilter] = useState<ReconciliationStatus | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionBusy, setActionBusy] = useState<"sync" | "run" | null>(null);
+  const [actionBusy, setActionBusy] = useState<"sync" | "run" | "seed" | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [syncResults, setSyncResults] = useState<SyncResult[] | null>(null);
+
+  const hasRealRazorpay = Boolean(
+    merchantAccount?.razorpay_key_id && !merchantAccount.razorpay_key_id.startsWith("rzp_test_demo")
+  );
 
   const loadCases = useCallback(async () => {
     setLoading(true);
@@ -41,21 +45,40 @@ export default function ReconciliationPage() {
       const data = await api.listCases(filter === "ALL" ? undefined : filter);
       setCases(data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load cases.");
+      if (err instanceof ApiError && err.status === 404) {
+        setCases([]);
+      } else {
+        setError(err instanceof ApiError ? err.message : "Failed to load cases.");
+      }
     } finally {
       setLoading(false);
     }
   }, [filter]);
 
   useEffect(() => {
-    if (merchantAccount) {
-      loadCases();
-    } else {
-      setLoading(false);
-    }
+    loadCases();
   }, [merchantAccount, loadCases]);
 
+  const handleSeedDemo = async () => {
+    setActionBusy("seed");
+    setActionMessage(null);
+    setSyncResults(null);
+    try {
+      const result = await api.seedDemoData();
+      await refreshMerchantAccount();
+      setActionMessage(
+        `Demo dataset loaded: ${result.records_created} created (${result.records_existing} updated) across ${result.settlements_count} settlements, ${result.payments_count} payments, ${result.refunds_count} refunds, and ${result.bank_transactions_count} bank rows. Click "Run Reconciliation" to reconcile.`
+      );
+      await loadCases();
+    } catch (err) {
+      setActionMessage(err instanceof ApiError ? err.message : "Failed to load demo data.");
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
   const handleSync = async () => {
+    if (!hasRealRazorpay) return;
     setActionBusy("sync");
     setActionMessage(null);
     setSyncResults(null);
@@ -94,62 +117,99 @@ export default function ReconciliationPage() {
         title="Reconciliation"
         description="Payments, settlements, and bank credits — matched, explained, or flagged for review."
         action={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleSync} disabled={actionBusy !== null}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleSeedDemo}
+              disabled={actionBusy !== null}
+              title="Load 100 reproducible synthetic records with known ground truth for evaluation"
+            >
+              {actionBusy === "seed" ? "Loading Demo…" : "Load Demo Data"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleSync}
+              disabled={actionBusy !== null || !hasRealRazorpay}
+              title={
+                hasRealRazorpay
+                  ? "Sync live data from Razorpay Test Mode"
+                  : "Connect a real Razorpay Test Mode key in Settings to sync live data"
+              }
+            >
               {actionBusy === "sync" ? "Syncing…" : "Sync Razorpay Data"}
             </Button>
-            <Button onClick={handleRun} disabled={actionBusy !== null}>
+            <Button
+              onClick={handleRun}
+              disabled={actionBusy !== null || (!merchantAccount && cases.length === 0)}
+              title="Execute deterministic reconciliation engine across all stored records"
+            >
               {actionBusy === "run" ? "Running…" : "Run Reconciliation"}
             </Button>
           </div>
         }
       />
 
-      {!merchantAccount && (
-        <EmptyState
-          title="No merchant account connected yet"
-          description="Connect your Razorpay Test Mode account in Settings first."
-        />
+      {actionMessage && (
+        <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-primary-bg)] px-4 py-2.5 text-sm text-[var(--color-text-primary)]">
+          {actionMessage}
+        </div>
       )}
 
-      {merchantAccount && (
+      {syncResults && (
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {syncResults.map((r) => (
+            <div
+              key={r.source}
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5"
+            >
+              <div className="text-[11px] font-medium text-[var(--color-text-muted)]">
+                {r.source.replace("RAZORPAY_", "")}
+              </div>
+              <div className="mt-1 text-sm tabular font-medium text-[var(--color-text-primary)]">
+                {r.fetched} fetched
+              </div>
+              {r.errors.length > 0 && (
+                <div className="mt-1 text-[11px] text-[var(--color-critical)]">{r.errors.length} error(s)</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!merchantAccount && cases.length === 0 && !loading && (
+        <Card className="mb-6 p-6">
+          <div className="max-w-xl space-y-3">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+              No transactions recorded yet
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              Evaluate the system immediately with the 100-record synthetic dataset (UTR matches, fee/tax
+              deductions, refunds, timing differences, missing bank credits, duplicates, and amount
+              mismatches), or connect a real Razorpay Test Mode account in Settings.
+            </p>
+            <div className="flex items-center gap-3 pt-1">
+              <Button onClick={handleSeedDemo} disabled={actionBusy !== null}>
+                {actionBusy === "seed" ? "Loading Demo Dataset…" : "Load 100 Demo Records"}
+              </Button>
+              <Link href="/settings" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+                Connect Razorpay Account →
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {(merchantAccount || cases.length > 0) && (
         <>
-          {actionMessage && (
-            <div className="mb-4 rounded-sm border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text-primary)]">
-              {actionMessage}
-            </div>
-          )}
-
-          {syncResults && (
-            <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-              {syncResults.map((r) => (
-                <div
-                  key={r.source}
-                  className="rounded-sm border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
-                >
-                  <div className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                    {r.source.replace("RAZORPAY_", "")}
-                  </div>
-                  <div className="mt-1 font-mono text-sm tabular text-[var(--color-text-primary)]">
-                    {r.fetched} fetched
-                  </div>
-                  {r.errors.length > 0 && (
-                    <div className="mt-1 text-[10px] text-[var(--color-critical)]">{r.errors.length} error(s)</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mb-4 flex gap-1.5">
+          <div className="mb-4 flex flex-wrap gap-1.5">
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
                 onClick={() => setFilter(s)}
-                className={`rounded-sm border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors ${
+                className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
                   filter === s
-                    ? "border-[var(--color-explained)] text-[var(--color-explained)]"
-                    : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)]"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)]"
                 }`}
               >
                 {s === "ALL" ? "All" : s.replace("_", " ")}
@@ -163,41 +223,41 @@ export default function ReconciliationPage() {
           {!loading && !error && cases.length === 0 && (
             <EmptyState
               title="No cases found"
-              description="Sync Razorpay data and run reconciliation to generate cases, or adjust your filter."
+              description="Load demo data or sync Razorpay data, then click Run Reconciliation to generate cases."
             />
           )}
 
           {!loading && !error && cases.length > 0 && (
-            <Card>
+            <Card className="overflow-hidden">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--color-border)] text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                    <th className="px-5 py-3 font-medium">Settlement</th>
-                    <th className="px-5 py-3 font-medium">Rule</th>
-                    <th className="px-5 py-3 font-medium text-right">Expected</th>
-                    <th className="px-5 py-3 font-medium text-right">Actual</th>
-                    <th className="px-5 py-3 font-medium text-right">Difference</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
+                  <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <th className="px-5 py-3">Settlement</th>
+                    <th className="px-5 py-3">Rule</th>
+                    <th className="px-5 py-3 text-right">Expected</th>
+                    <th className="px-5 py-3 text-right">Actual</th>
+                    <th className="px-5 py-3 text-right">Difference</th>
+                    <th className="px-5 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]">
                   {cases.map((c) => (
-                    <tr key={c.id} className="hover:bg-[var(--color-surface-hover)]">
+                    <tr key={c.id} className="transition-colors hover:bg-[var(--color-surface-hover)]">
                       <td className="px-5 py-3">
-                        <Link href={`/reconciliation/${c.id}`} className="font-mono text-xs text-[var(--color-explained)]">
+                        <Link href={`/reconciliation/${c.id}`} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
                           {c.razorpay_settlement_id ?? c.id.slice(0, 8)}
                         </Link>
                       </td>
-                      <td className="px-5 py-3 font-mono text-[11px] text-[var(--color-text-muted)]">
+                      <td className="px-5 py-3 text-[12px] text-[var(--color-text-muted)]">
                         {c.match_rule ?? "—"}
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-xs tabular text-[var(--color-text-secondary)]">
+                      <td className="px-5 py-3 text-right text-[13px] tabular text-[var(--color-text-secondary)]">
                         {formatRupees(c.expected_amount)}
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-xs tabular text-[var(--color-text-secondary)]">
+                      <td className="px-5 py-3 text-right text-[13px] tabular text-[var(--color-text-secondary)]">
                         {formatRupees(c.actual_amount)}
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-xs tabular text-[var(--color-text-primary)]">
+                      <td className="px-5 py-3 text-right text-[13px] tabular font-medium text-[var(--color-text-primary)]">
                         {formatRupees(c.difference)}
                       </td>
                       <td className="px-5 py-3">

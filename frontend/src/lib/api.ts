@@ -1,6 +1,7 @@
 import type {
   AuditLogEntry,
   DashboardSummary,
+  DemoSeedResponse,
   HealthCheck,
   ImportSummary,
   Investigation,
@@ -57,10 +58,14 @@ async function request<T>(
   const body = contentType.includes("application/json") ? await res.json() : await res.text();
 
   if (!res.ok) {
-    const detail =
-      typeof body === "object" && body !== null && "detail" in body
-        ? String((body as { detail: unknown }).detail)
-        : `Request failed with status ${res.status}`;
+    const rawDetail = typeof body === "object" && body !== null && "detail" in body
+      ? (body as { detail: unknown }).detail
+      : null;
+    const detail = rawDetail != null
+      ? Array.isArray(rawDetail)
+        ? (rawDetail as { msg: string }[]).map(e => e.msg).join("; ")
+        : String(rawDetail)
+      : `Request failed with status ${res.status}`;
     throw new ApiError(res.status, detail);
   }
 
@@ -124,12 +129,19 @@ export function uploadBankStatement(file: File) {
 }
 
 // ── Reconciliation ───────────────────────────────────────────────────────
+export function seedDemoData() {
+  return request<DemoSeedResponse>("/reconciliation/seed-demo", { method: "POST" });
+}
+
 export function runReconciliation() {
   return request<ReconciliationRunSummary>("/reconciliation/run", { method: "POST" });
 }
 
-export function listCases(statusFilter?: string) {
-  const qs = statusFilter ? `?status_filter=${encodeURIComponent(statusFilter)}` : "";
+export function listCases(statusFilter?: string, runId?: string) {
+  const params = new URLSearchParams();
+  if (statusFilter) params.set("status_filter", statusFilter);
+  if (runId) params.set("run_id", runId);
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return request<ReconciliationCaseListItem[]>(`/reconciliation/cases${qs}`);
 }
 

@@ -19,7 +19,7 @@ def env(monkeypatch):
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "x")
     monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "x")
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@localhost/db")
-    monkeypatch.setenv("DATABASE_URL_SYNC", "postgresql+psycopg2://u:p@localhost/db")
+    monkeypatch.setenv("DATABASE_URL_SYNC", "postgresql+psycopg://u:p@localhost/db")
     monkeypatch.setenv("APP_SECRET_KEY", "x")
     monkeypatch.setenv("JWT_SECRET_KEY", "x")
     from app.core.config import get_settings

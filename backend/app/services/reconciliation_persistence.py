@@ -81,6 +81,33 @@ async def run_and_persist_reconciliation(
     run.needs_review_count = result.needs_review
     run.status = "COMPLETED"
 
+    # Track amounts per case status — "unresolved" here means NEEDS_REVIEW
+    # specifically, since MATCHED/EXPLAINED are both successfully reconciled
+    # outcomes (consistent with dashboard_service's reconciliation_rate logic).
+    total_amount = 0.0
+    matched_amount = 0.0
+    unresolved_amount = 0.0
+    failed_count = 0
+
+    for case in result.cases:
+        amount = case.actual_amount if case.actual_amount is not None else (case.expected_amount or 0.0)
+        total_amount += amount
+        if case.status in ("MATCHED", "EXPLAINED", "RESOLVED"):
+            matched_amount += amount
+        elif case.status == "NEEDS_REVIEW":
+            unresolved_amount += amount
+        elif case.status == "FALSE_POSITIVE":
+            failed_count += 1
+
+    run.total_amount = round(total_amount, 2)
+    run.matched_amount = round(matched_amount, 2)
+    run.unresolved_amount = round(unresolved_amount, 2)
+    run.failed_count = failed_count
+    run.match_rate = (
+        round(((result.matched + result.explained) / result.total_cases) * 100, 2)
+        if result.total_cases else 0.0
+    )
+
     await audit_service.log_action(
         db, actor_type="SYSTEM", action="RECONCILIATION_RUN_COMPLETED",
         new_state={
@@ -88,6 +115,7 @@ async def run_and_persist_reconciliation(
             "matched": result.matched,
             "explained": result.explained,
             "needs_review": result.needs_review,
+            "match_rate": run.match_rate,
         },
     )
 

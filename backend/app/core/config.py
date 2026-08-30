@@ -38,8 +38,10 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str
 
     # ── AI ───────────────────────────────────────────
+    AI_PROVIDER: str = "gemini"  # "gemini" | "anthropic"
+    GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
-    AI_MODEL: str = "claude-sonnet-4-6"
+    AI_MODEL: str = ""  # If empty, defaults to gemini-2.5-flash or claude-sonnet-4-6 based on provider
     AI_MAX_TOKENS: int = 2000
     AI_TIMEOUT_SECONDS: int = 30
 
@@ -70,9 +72,11 @@ class Settings(BaseSettings):
             "APP_ENV": self.APP_ENV,
             "API_V1_PREFIX": self.API_V1_PREFIX,
             "RAZORPAY_KEY_ID": self.RAZORPAY_KEY_ID[:10] + "..." if self.RAZORPAY_KEY_ID else "",
-            "RAZORPAY_KEY_SECRET": redacted,
-            "ANTHROPIC_API_KEY": redacted,
-            "JWT_SECRET_KEY": redacted,
+            "RAZORPAY_KEY_SECRET": redacted if self.RAZORPAY_KEY_SECRET else "",
+            "AI_PROVIDER": self.AI_PROVIDER,
+            "GEMINI_API_KEY": redacted if self.GEMINI_API_KEY else "",
+            "ANTHROPIC_API_KEY": redacted if self.ANTHROPIC_API_KEY else "",
+            "JWT_SECRET_KEY": redacted if self.JWT_SECRET_KEY else "",
             "AI_MODEL": self.AI_MODEL,
             "MATCH_DATE_WINDOW_DAYS": self.MATCH_DATE_WINDOW_DAYS,
         }

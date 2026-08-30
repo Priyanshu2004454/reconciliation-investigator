@@ -1,26 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #0E1013;
-  --color-surface: #161920;
-  --color-surface-hover: #1D212A;
-  --color-border: #272B34;
-  --color-border-strong: #363B47;
-  --color-text-primary: #E7E9ED;
-  --color-text-secondary: #9199A8;
-  --color-text-muted: #666D7C;
+  /* Premium fintech light theme */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
 
-  --color-matched: #34D399;
-  --color-matched-bg: #0F2A22;
-  --color-explained: #60A5FA;
-  --color-explained-bg: #10233F;
-  --color-review: #F2B84B;
-  --color-review-bg: #332508;
-  --color-critical: #F1685C;
-  --color-critical-bg: #331411;
+  /* Semantic status colors */
+  --color-matched: #16A34A;
+  --color-matched-bg: #F0FDF4;
+  --color-explained: #2563EB;
+  --color-explained-bg: #EFF6FF;
+  --color-review: #D97706;
+  --color-review-bg: #FFFBEB;
+  --color-critical: #DC2626;
+  --color-critical-bg: #FEF2F2;
 
-  --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  /* Primary brand blue (buttons, links, active nav) */
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-bg: #EFF6FF;
+
+  /* Subtle AI accent -- indigo, used ONLY for AI badges/icons/copilot, never as a theme color */
+  --color-ai-accent: #6366F1;
+  --color-ai-accent-bg: #EEF2FF;
+
+  --font-sans: "Inter", "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 2px 4px 0 rgb(15 23 42 / 0.06), 0 4px 8px 0 rgb(15 23 42 / 0.08);
 }
 
 @theme inline {
@@ -40,6 +54,11 @@
   --color-review-bg: var(--color-review-bg);
   --color-critical: var(--color-critical);
   --color-critical-bg: var(--color-critical-bg);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-bg: var(--color-primary-bg);
+  --color-ai-accent: var(--color-ai-accent);
+  --color-ai-accent-bg: var(--color-ai-accent-bg);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 }
@@ -56,19 +75,26 @@ body {
 }
 
 ::selection {
-  background: var(--color-explained);
-  color: #0E1013;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-explained);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 /* Tabular numerals everywhere money/counts appear */
 .tabular {
   font-variant-numeric: tabular-nums;
-  font-family: var(--font-mono);
+}
+
+.card-shadow {
+  box-shadow: var(--shadow-card);
+}
+
+.card-shadow:hover {
+  box-shadow: var(--shadow-card-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {
