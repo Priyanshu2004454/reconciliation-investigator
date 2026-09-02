@@ -76,6 +76,8 @@ class DbInvestigationStore(InvestigationDataStore):
     async def search_bank_transactions(
         self, utr=None, reference_id=None, amount=None, date_from=None, date_to=None,
     ) -> list[dict]:
+        from datetime import date, datetime
+
         stmt = select(BankTransaction).where(
             BankTransaction.merchant_account_id == self.merchant_account_id,
             BankTransaction.is_duplicate.is_(False),
@@ -87,8 +89,18 @@ class DbInvestigationStore(InvestigationDataStore):
         if amount is not None:
             stmt = stmt.where(BankTransaction.credit == amount)
         if date_from:
+            if isinstance(date_from, str):
+                try:
+                    date_from = date.fromisoformat(date_from.split("T")[0])
+                except Exception:
+                    pass
             stmt = stmt.where(BankTransaction.transaction_date >= date_from)
         if date_to:
+            if isinstance(date_to, str):
+                try:
+                    date_to = date.fromisoformat(date_to.split("T")[0])
+                except Exception:
+                    pass
             stmt = stmt.where(BankTransaction.transaction_date <= date_to)
 
         rows = (await self.db.execute(stmt)).scalars().all()

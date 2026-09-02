@@ -35,7 +35,10 @@ class _FakeMessages:
 
 
 class FakeAnthropicClient:
-    """Duck-types the parts of anthropic.AsyncAnthropic our investigator uses."""
+    """Duck-types the parts of anthropic.AsyncAnthropic our investigator and copilot use."""
 
     def __init__(self, scripted_responses: list[FakeResponse]):
         self.messages = _FakeMessages(scripted_responses)
+
+    async def create_message(self, system: str, tools: list[dict], messages: list[dict], max_tokens: int):
+        return await self.messages.create(system=system, tools=tools, messages=messages, max_tokens=max_tokens)

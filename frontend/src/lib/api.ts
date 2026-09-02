@@ -1,5 +1,6 @@
 import type {
   AuditLogEntry,
+  CopilotChatResponse,
   DashboardSummary,
   DemoSeedResponse,
   ExceptionCase,
@@ -162,6 +163,14 @@ export function listReconciliationRuns(limit = 10) {
 export function listExceptions(runId?: string) {
   const qs = runId ? `?run_id=${encodeURIComponent(runId)}` : "";
   return request<ExceptionCase[]>(`/reconciliation/exceptions${qs}`);
+}
+
+// ── AI Copilot ──────────────────────────────────────────────────────────
+export function copilotChat(message: string, history: { role: "user" | "assistant"; text: string }[]) {
+  return request<CopilotChatResponse>("/copilot/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, history }),
+  });
 }
 
 // ── Investigations ───────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.core.config import get_settings
-from app.api.v1 import auth, merchant_accounts, razorpay_routes, bank_statements, reconciliation, investigations, dashboard, audit, webhooks
+from app.api.v1 import auth, merchant_accounts, razorpay_routes, bank_statements, reconciliation, investigations, dashboard, audit, webhooks, copilot
 
 settings = get_settings()
 
@@ -46,6 +46,7 @@ app.include_router(reconciliation.router, prefix=settings.API_V1_PREFIX)
 app.include_router(investigations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(dashboard.router, prefix=settings.API_V1_PREFIX)
 app.include_router(audit.router, prefix=settings.API_V1_PREFIX)
+app.include_router(copilot.router, prefix=settings.API_V1_PREFIX)
 
 # Deliberately NOT under /api/v1 — Razorpay's webhook is a fixed integration
 # endpoint (section 5 specifies POST /api/webhooks/razorpay exactly), not a

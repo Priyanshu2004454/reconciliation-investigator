@@ -2,7 +2,7 @@
 LLM Provider Abstraction for the AI Investigator.
 
 Supports:
-1. Google Gemini (default, Free Tier compatible: gemini-2.5-flash) via official google-genai SDK.
+1. Google Gemini (default, Free Tier compatible: gemini-3.6-flash) via official google-genai SDK.
 2. Anthropic Claude (claude-sonnet-4-6, claude-3-5-sonnet) via anthropic SDK.
 
 Both providers share:
@@ -99,6 +99,36 @@ class InvestigationHallucinationError(InvestigationError):
     """Raised when the AI's final answer references evidence it never actually fetched."""
 
 
+class AIProviderError(Exception):
+    """
+    Raised by create_message() (a generic, single-call interface used by the
+    Copilot orchestrator, app/ai/copilot.py -- distinct from investigate(),
+    which runs a full self-contained investigation loop). `retryable`
+    signals whether the failure is transient (e.g. rate limiting) so the
+    caller can pick an appropriate HTTP status.
+    """
+    def __init__(self, message: str, retryable: bool = False):
+        super().__init__(message)
+        self.retryable = retryable
+
+
+@dataclass
+class _NormalizedBlock:
+    type: str
+    text: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+    input: Optional[dict] = None
+    raw_part: Any = None
+
+
+@dataclass
+class _NormalizedResponse:
+    content: list[_NormalizedBlock] = field(default_factory=list)
+    stop_reason: str = "end_turn"
+    raw_content: Any = None
+
+
 @dataclass
 class ToolCallLogEntry:
     tool_name: str
@@ -181,6 +211,20 @@ class BaseAIProvider(ABC):
         timeout_seconds: Optional[int] = None,
         max_tool_iterations: int = 12,
     ) -> InvestigationRunResult:
+        pass
+
+    @abstractmethod
+    async def create_message(
+        self, system: str, tools: list[dict], messages: list[dict], max_tokens: int,
+    ) -> Any:
+        """
+        Makes one raw model call for generic multi-turn tool-use callers
+        (currently the Copilot orchestrator, app/ai/copilot.py). Returns a
+        response exposing `.content` (blocks with `.type`, and `.text` or
+        `.id`/`.name`/`.input`) and `.stop_reason` -- the Anthropic SDK
+        shape. Distinct from investigate(), which is a complete, self-
+        contained investigation loop with its own hallucination guard.
+        """
         pass
 
 
@@ -298,16 +342,33 @@ class AnthropicAIProvider(BaseAIProvider):
             f"{max_tool_iterations} tool-use iterations."
         )
 
+    async def create_message(
+        self, system: str, tools: list[dict], messages: list[dict], max_tokens: int,
+    ) -> Any:
+        """
+        Raw single-call interface for the Copilot orchestrator. The Anthropic
+        SDK response is already shaped exactly as that orchestrator expects
+        (`.content` blocks, `.stop_reason`) -- no normalization needed,
+        unlike GeminiAIProvider.create_message() below.
+        """
+        try:
+            return await self.client.messages.create(
+                model=self._model, max_tokens=max_tokens, system=system, tools=tools, messages=messages,
+            )
+        except Exception as exc:
+            status_code = getattr(exc, "status_code", None)
+            raise AIProviderError(str(exc), retryable=(status_code == 429)) from exc
+
 
 class GeminiAIProvider(BaseAIProvider):
     """
     Official Google GenAI SDK integration for the AI Investigator.
-    Uses currently supported Gemini models with Free Tier availability (e.g. gemini-2.5-flash).
+    Uses currently supported Gemini models with Free Tier availability (e.g. gemini-3.6-flash).
     """
 
     def __init__(self, client: Any, model: Optional[str] = None):
         self.client = client
-        self._model = model or "gemini-2.5-flash"
+        self._model = model or "gemini-3.6-flash"
         self._tools_config = self._build_gemini_tools()
 
     @property
@@ -376,11 +437,13 @@ class GeminiAIProvider(BaseAIProvider):
                 )
 
             if types:
+                thinking_cfg = types.ThinkingConfig(thinking_budget=0) if hasattr(types, "ThinkingConfig") else None
                 config = types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     tools=self._tools_config,
                     temperature=0.0,
                     max_output_tokens=settings.AI_MAX_TOKENS,
+                    thinking_config=thinking_cfg,
                 )
                 response = await self.client.aio.models.generate_content(
                     model=self._model,
@@ -486,3 +549,144 @@ class GeminiAIProvider(BaseAIProvider):
             f"Investigation of case {case_id} did not reach a final answer within "
             f"{max_tool_iterations} tool-use iterations."
         )
+
+    def _build_gemini_tools_from_specs(self, tool_specs: list[dict]) -> list[Any]:
+        """
+        Builds Gemini function-declaration tools from a generic, Anthropic-
+        shaped tool spec list (name/description/input_schema). Used by
+        create_message() for the Copilot's own tool set, which differs from
+        the Investigator's self._tools_config built once at __init__ time.
+        """
+        try:
+            from google.genai import types
+            declarations = [
+                types.FunctionDeclaration(
+                    name=t["name"], description=t["description"], parameters=t["input_schema"],
+                )
+                for t in tool_specs
+            ]
+            return [types.Tool(function_declarations=declarations)]
+        except Exception:
+            return tool_specs
+
+    def _anthropic_messages_to_gemini_contents(self, messages: list[dict]) -> list[Any]:
+        """Converts the Anthropic-shaped message list the Copilot orchestrator
+        builds (app/ai/copilot.py) into Gemini's `contents` format."""
+        try:
+            from google.genai import types
+        except ImportError:
+            types = None
+
+        contents: list[Any] = []
+        for m in messages:
+            role = "user" if m["role"] == "user" else "model"
+            content = m["content"]
+            parts: list[Any] = []
+
+            if isinstance(content, str):
+                parts.append(types.Part.from_text(text=content) if types else {"text": content})
+            else:
+                for block in content:
+                    raw_part = block.get("raw_part") if isinstance(block, dict) else getattr(block, "raw_part", None)
+                    if raw_part is not None and types:
+                        parts.append(raw_part)
+                        continue
+
+                    btype = block.get("type") if isinstance(block, dict) else getattr(block, "type", None)
+                    if btype == "text":
+                        text = block.get("text") if isinstance(block, dict) else block.text
+                        parts.append(types.Part.from_text(text=text) if types else {"text": text})
+                    elif btype == "tool_use":
+                        name = block.get("name") if isinstance(block, dict) else block.name
+                        args = block.get("input") if isinstance(block, dict) else block.input
+                        if types:
+                            parts.append(types.Part.from_function_call(name=name, args=args or {}))
+                        else:
+                            parts.append({"function_call": {"name": name, "args": args or {}}})
+                    elif btype == "tool_result":
+                        raw = block.get("content") if isinstance(block, dict) else getattr(block, "content", None)
+                        try:
+                            result_obj = json.loads(raw) if isinstance(raw, str) else raw
+                        except (TypeError, ValueError):
+                            result_obj = {"result": raw}
+                        name = (
+                            (block.get("tool_name") if isinstance(block, dict) else getattr(block, "tool_name", None))
+                            or (block.get("name") if isinstance(block, dict) else getattr(block, "name", None))
+                            or (block.get("tool_use_id") if isinstance(block, dict) else getattr(block, "tool_use_id", None))
+                            or "tool_result"
+                        )
+                        if types:
+                            parts.append(types.Part.from_function_response(name=name, response={"result": result_obj}))
+                        else:
+                            parts.append({"function_response": {"name": name, "response": {"result": result_obj}}})
+
+            if types:
+                contents.append(types.Content(role=role, parts=parts))
+            else:
+                contents.append({"role": role, "parts": parts})
+        return contents
+
+    async def create_message(
+        self, system: str, tools: list[dict], messages: list[dict], max_tokens: int,
+    ) -> Any:
+        """
+        Makes one raw Gemini call and normalizes the response into the same
+        `.content` / `.stop_reason` shape the Copilot orchestrator
+        (app/ai/copilot.py) already expects from the Anthropic SDK, so its
+        tool-use loop and grounding guard work unmodified for either provider.
+        """
+        try:
+            from google.genai import types
+        except ImportError:
+            types = None
+
+        contents = self._anthropic_messages_to_gemini_contents(messages)
+        gemini_tools = self._build_gemini_tools_from_specs(tools)
+
+        try:
+            if types:
+                config = types.GenerateContentConfig(
+                    system_instruction=system,
+                    tools=gemini_tools,
+                    temperature=0.0,
+                    max_output_tokens=max_tokens,
+                )
+                response = await self.client.aio.models.generate_content(
+                    model=self._model, contents=contents, config=config,
+                )
+            else:
+                response = await self.client.aio.models.generate_content(
+                    model=self._model, contents=contents,
+                )
+        except Exception as exc:
+            status_code = getattr(exc, "status_code", getattr(exc, "code", None))
+            raise AIProviderError(str(exc), retryable=(status_code in (429, 503))) from exc
+
+        if not getattr(response, "candidates", None):
+            raise AIProviderError("Gemini API returned an empty candidate response.", retryable=False)
+
+        candidate_content = response.candidates[0].content
+        blocks: list[_NormalizedBlock] = []
+
+        for p in getattr(candidate_content, "parts", []):
+            if getattr(p, "text", None):
+                blocks.append(_NormalizedBlock(type="text", text=p.text, raw_part=p))
+            elif getattr(p, "function_call", None):
+                fc = p.function_call
+                args = getattr(fc, "args", {})
+                if hasattr(args, "model_dump"):
+                    args = args.model_dump()
+                elif not isinstance(args, dict):
+                    args = dict(args)
+                blocks.append(_NormalizedBlock(
+                    type="tool_use",
+                    id=getattr(fc, "name", "call"),
+                    name=getattr(fc, "name", ""),
+                    input=args,
+                    raw_part=p,
+                ))
+
+        stop_reason = "tool_use" if any(b.type == "tool_use" for b in blocks) else "end_turn"
+        return _NormalizedResponse(content=blocks, stop_reason=stop_reason, raw_content=candidate_content)
+
+

@@ -82,16 +82,15 @@ SUBMIT_TOOL: dict[str, Any] = {
 }
 
 
-class InvestigationError(Exception):
-    pass
+# Exception classes live in providers.py and are re-exported here for
+# backward compatibility so callers that import from investigator still work.
+from app.ai.providers import (  # noqa: E402
+    InvestigationError,
+    InvestigationTimeoutError,
+    InvestigationHallucinationError,
+)
 
-
-class InvestigationTimeoutError(InvestigationError):
-    pass
-
-
-class InvestigationHallucinationError(InvestigationError):
-    """Raised when the AI's final answer references evidence it never actually fetched."""
+__all__ = ["InvestigationError", "InvestigationTimeoutError", "InvestigationHallucinationError"]
 
 
 @dataclass
@@ -107,6 +106,7 @@ class InvestigationRunResult:
     tool_calls: list[ToolCallLogEntry] = field(default_factory=list)
     duration_ms: int = 0
     raw_final_input: dict = field(default_factory=dict)
+    ai_model: str = ""  # populated by providers; stored in Investigation.ai_model
 
 
 def _serialize_block(block: Any) -> dict:
@@ -160,94 +160,27 @@ async def investigate_case(
     max_tool_iterations: int = 12,
 ) -> InvestigationRunResult:
     """
-    Runs the full tool-use investigation loop for one case and returns a
-    validated, hallucination-checked structured result. `client` must expose
-    an async `.messages.create(...)` method matching the Anthropic SDK shape
-    (an AsyncAnthropic instance in production, a fake in tests).
+    Legacy helper kept for backward compatibility with existing tests.
+
+    `client` must expose an async `.messages.create(...)` matching the Anthropic SDK
+    shape (AsyncAnthropic in production, FakeAnthropicClient in tests).  This wraps
+    the old call site by constructing a temporary AnthropicAIProvider and delegating
+    to its investigate() method so both paths share a single implementation.
     """
+    from app.ai.providers import AnthropicAIProvider
+
+    provider = AnthropicAIProvider(client=client)
     settings = get_settings()
-    start = time.monotonic()
-
-    tools = TOOL_SPECS + [SUBMIT_TOOL]
-    messages: list[dict] = [
-        {"role": "user", "content": f"Investigate reconciliation case_id={case_id}. "
-                                     f"Start by calling get_reconciliation_case."}
-    ]
-    fetched_ids: set[tuple[str, str]] = set()
-    tool_call_log: list[ToolCallLogEntry] = []
-
-    for _ in range(max_tool_iterations):
-        elapsed = time.monotonic() - start
-        if elapsed > settings.AI_TIMEOUT_SECONDS:
-            raise InvestigationTimeoutError(
-                f"Investigation of case {case_id} exceeded {settings.AI_TIMEOUT_SECONDS}s timeout."
-            )
-
-        response = await client.messages.create(
-            model=settings.AI_MODEL,
-            max_tokens=settings.AI_MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            tools=tools,
-            messages=messages,
-        )
-
-        messages.append({"role": "assistant", "content": [_serialize_block(b) for b in response.content]})
-
-        if response.stop_reason != "tool_use":
-            # Model answered in free text instead of calling submit_investigation_result.
-            # We don't accept that — nudge it back on track rather than trying to parse prose.
-            messages.append({
-                "role": "user",
-                "content": "You must call the submit_investigation_result tool with your final "
-                            "structured finding — plain text answers are not accepted.",
-            })
-            continue
-
-        tool_result_blocks = []
-        final_input: Optional[dict] = None
-
-        for block in response.content:
-            if block.type != "tool_use":
-                continue
-
-            if block.name == "submit_investigation_result":
-                final_input = block.input
-                continue  # no tool_result needed — this ends the loop below
-
-            try:
-                result = await execute_tool(block.name, block.input, store, allowed_case_id=case_id)
-                _track_fetched_ids(block.name, result, fetched_ids)
-                tool_call_log.append(ToolCallLogEntry(
-                    tool_name=block.name, tool_input=block.input,
-                    result_summary=json.dumps(result)[:300],
-                ))
-                content_str = json.dumps(result)
-            except ToolExecutionError as exc:
-                content_str = json.dumps({"error": str(exc)})
-
-            tool_result_blocks.append({
-                "type": "tool_result", "tool_use_id": block.id, "content": content_str,
-            })
-
-        if final_input is not None:
-            try:
-                parsed = AIInvestigationResult.model_validate(final_input)
-            except ValidationError as exc:
-                raise InvestigationError(f"AI returned an invalid structured result: {exc}") from exc
-
-            _validate_no_hallucinated_evidence(parsed, fetched_ids, case_id)
-
-            return InvestigationRunResult(
-                result=parsed,
-                tool_calls=tool_call_log,
-                duration_ms=int((time.monotonic() - start) * 1000),
-                raw_final_input=final_input,
-            )
-
-        if tool_result_blocks:
-            messages.append({"role": "user", "content": tool_result_blocks})
-
-    raise InvestigationError(
-        f"Investigation of case {case_id} did not reach a final answer within "
-        f"{max_tool_iterations} tool-use iterations."
+    run = await provider.investigate(
+        case_id=case_id,
+        store=store,
+        timeout_seconds=settings.AI_TIMEOUT_SECONDS,
+        max_tool_iterations=max_tool_iterations,
+    )
+    return InvestigationRunResult(
+        result=run.result,
+        tool_calls=run.tool_calls,
+        duration_ms=run.duration_ms,
+        raw_final_input=run.raw_final_input,
+        ai_model=run.ai_model,
     )

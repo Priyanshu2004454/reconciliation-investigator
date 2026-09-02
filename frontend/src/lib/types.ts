@@ -231,6 +231,29 @@ export interface ExceptionCase {
   created_at: string;
 }
 
+export interface CopilotInsight {
+  title: string;
+  count: number;
+  amount: number;
+}
+
+export interface CopilotCaseRef {
+  case_id: string;
+  label: string;
+}
+
+export interface CopilotSource {
+  tool_name: string;
+  summary: string;
+}
+
+export interface CopilotChatResponse {
+  text: string;
+  insights: CopilotInsight[];
+  case_refs: CopilotCaseRef[];
+  sources: CopilotSource[];
+}
+
 export interface HealthCheck {
   status: string;
   app_env: string;

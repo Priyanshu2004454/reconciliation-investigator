@@ -32,7 +32,7 @@ def get_ai_provider() -> BaseAIProvider:
             ) from exc
 
         client = genai.Client(api_key=key)
-        model = settings.AI_MODEL if (settings.AI_MODEL and not settings.AI_MODEL.startswith("claude")) else "gemini-2.5-flash"
+        model = settings.AI_MODEL if (settings.AI_MODEL and not settings.AI_MODEL.startswith("claude")) else "gemini-3.1-flash-lite"
         return GeminiAIProvider(client=client, model=model)
 
     elif provider_name == "anthropic":
