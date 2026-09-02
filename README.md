@@ -184,6 +184,6 @@ Visit **`http://localhost:3000`** in your browser.
 
 ## 👨‍💻 Author & Contact
 
-- **Author**: Priyanshu
+- **Author**: Priyanshu kumar
 - **Event**: Razorpay AI Buildathon 2026
-- **Repository**: [github.com/your-username/reconciliation-investigator](https://github.com/)
+- - **Repository**: [github.com/Priyanshu2004454/reconciliation-investigator](https://github.com/Priyanshu2004454/reconciliation-investigator)
