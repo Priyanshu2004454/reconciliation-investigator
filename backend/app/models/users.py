@@ -22,11 +22,7 @@ class User(Base):
 
 
 class MerchantAccount(Base):
-    """
-    Stores a reference to which Razorpay account this merchant uses.
-    Only the key ID is stored here — the secret always comes from env vars,
-    never from the database, so it can never leak via a DB dump or API response.
-    """
+    
     __tablename__ = "merchant_accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

@@ -1,15 +1,4 @@
-"""
-The AI Investigator never touches the database directly. Every tool call
-goes through this interface, which is the single choke point where we can
-validate inputs and guarantee the AI only ever sees data for the case it
-was actually asked to investigate (section 12: "should NOT have unrestricted
-database access").
-
-Two implementations exist:
-  - DbInvestigationStore  (app/ai/db_data_store.py) — real Postgres-backed, used in production
-  - InMemoryInvestigationStore (tests) — used for unit testing the tool-use loop
-    without needing a live database or Razorpay credentials
-"""
+"""Data store interfaces used by the AI Investigator."""
 
 from abc import ABC, abstractmethod
 from typing import Optional

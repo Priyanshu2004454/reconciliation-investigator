@@ -1,17 +1,3 @@
-"""
-LLM Provider Abstraction for the AI Investigator.
-
-Supports:
-1. Google Gemini (default, Free Tier compatible: gemini-3.6-flash) via official google-genai SDK.
-2. Anthropic Claude (claude-sonnet-4-6, claude-3-5-sonnet) via anthropic SDK.
-
-Both providers share:
-- The exact same system prompt and financial investigation instructions.
-- The exact same tool suite (get_payment, get_settlement, search_bank_transactions, etc.).
-- Multi-turn tool execution loop with hallucination guardrails.
-- Structured output validation via submit_investigation_result tool.
-"""
-
 import json
 import time
 from abc import ABC, abstractmethod
@@ -25,7 +11,7 @@ from app.ai.tools import TOOL_SPECS, execute_tool, ToolExecutionError
 from app.core.config import Settings, get_settings
 from app.schemas.investigation import AIInvestigationResult
 
-SYSTEM_PROMPT = """You are the AI Investigator inside a Razorpay reconciliation product.
+SYSTEM_PROMPT = """You are the AI Investigator inside a  reconciliation application.
 
 You investigate a SINGLE reconciliation case using the tools provided. You must:
 - Only use evidence you actually retrieve via tool calls. Never invent transaction IDs,

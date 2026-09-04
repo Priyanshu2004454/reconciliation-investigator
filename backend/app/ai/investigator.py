@@ -1,18 +1,3 @@
-"""
-The AI Investigator (sections 10-13).
-
-Core discipline enforced here, not just asked of the model in a prompt:
-  - The AI can ONLY submit a final answer by calling the `submit_investigation_result`
-    tool with a schema-validated payload — we never regex/parse JSON out of free text.
-  - Every evidence item in the final answer is cross-checked against IDs the AI
-    ACTUALLY fetched via tool calls during this run. If the AI's answer references
-    a payment/settlement/UTR it never looked up, the result is rejected before it
-    ever reaches a human — this is the hallucination guard.
-  - The AI never resolves a case itself. `mark_case_for_review` is the only
-    mutating tool, and financial state changes only ever happen through the
-    human-in-the-loop endpoints (Phase 8), never automatically from this module.
-"""
-
 import json
 import time
 import uuid
@@ -26,7 +11,7 @@ from app.ai.tools import TOOL_SPECS, execute_tool, ToolExecutionError
 from app.core.config import get_settings
 from app.schemas.investigation import AIInvestigationResult
 
-SYSTEM_PROMPT = """You are the AI Investigator inside a Razorpay reconciliation product.
+SYSTEM_PROMPT = """You are the AI Investigator inside a  reconciliation application.
 
 You investigate a SINGLE reconciliation case using the tools provided. You must:
 - Only use evidence you actually retrieve via tool calls. Never invent transaction IDs,

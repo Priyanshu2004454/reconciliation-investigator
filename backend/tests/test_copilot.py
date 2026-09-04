@@ -1,9 +1,3 @@
-"""
-Tests for the Copilot orchestrator (app/ai/copilot.py). Uses a mocked
-AIProviderClient and an in-memory data store -- no real database or AI
-provider calls, matching the pattern in tests/test_ai_investigator.py.
-"""
-
 import pytest
 
 from app.ai.copilot import run_copilot_turn, CopilotGroundingError, CopilotError

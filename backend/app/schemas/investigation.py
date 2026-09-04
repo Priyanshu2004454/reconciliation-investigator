@@ -7,9 +7,7 @@ ROOT_CAUSES = {
     "FEE_TAX", "REFUND", "MISSING_BANK_CREDIT", "DUPLICATE",
     "TIMING_DIFFERENCE", "AMOUNT_MISMATCH", "UNKNOWN",
 }
-# Must exactly match the (source_type, source_id) pairs recorded by
-# track_fetched_ids() in app/ai/providers.py — these are the only source_type
-# spellings the hallucination guard will ever recognize as "genuinely fetched".
+
 SOURCE_TYPES = {
     "RAZORPAY_PAYMENT", "RAZORPAY_SETTLEMENT", "RAZORPAY_REFUND",
     "BANK_STATEMENT", "RECONCILIATION_CASE",
@@ -17,13 +15,8 @@ SOURCE_TYPES = {
 
 
 class EvidenceItem(BaseModel):
-    """
-    Every evidence item MUST trace back to a real tool call result the AI
-    actually made during this investigation — see investigator.py's
-    hallucination guard, which cross-checks source_id against IDs the AI
-    genuinely fetched before accepting the final output.
-    """
-    source_type: str  # RecordSource value, e.g. "RAZORPAY_SETTLEMENT"
+    
+    source_type: str  
     source_id: str
     description: str
 

@@ -1,18 +1,3 @@
-"""
-Unit tests for the Gemini AI provider.
-
-All Gemini API calls are mocked — no real network calls are made.
-Tests cover:
-  1. Happy-path investigation (tool-call loop → submit_investigation_result)
-  2. Hallucination guard (evidence referencing unfetched IDs is rejected)
-  3. Plain-text response nudge (Gemini sends text → we push back → it then submits)
-  4. Iteration exhaustion
-  5. Provider selection (get_ai_provider returns GeminiAIProvider for AI_PROVIDER=gemini)
-  6. Provider selection (get_ai_provider returns AnthropicAIProvider for AI_PROVIDER=anthropic)
-  7. Misconfigured / missing GEMINI_API_KEY raises AIClientNotConfiguredError
-  8. Unsupported AI_PROVIDER raises AIClientNotConfiguredError
-"""
-
 import pytest
 
 from app.ai.providers import (

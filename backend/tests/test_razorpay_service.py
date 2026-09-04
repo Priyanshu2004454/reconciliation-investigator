@@ -1,9 +1,3 @@
-"""
-These tests mock the razorpay.Client so they run without real Razorpay
-credentials. They cover: pagination across multiple pages, error translation
-(auth/timeout/rate-limit), and input validation.
-"""
-
 from unittest.mock import patch, MagicMock
 
 import pytest

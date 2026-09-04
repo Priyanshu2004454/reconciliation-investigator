@@ -12,12 +12,6 @@ from app.schemas.reconciliation_engine import PaymentInput, RefundInput
 
 
 class DbInvestigationStore(InvestigationDataStore):
-    """
-    Every query here is scoped to `merchant_account_id` — the AI investigating
-    one merchant's case can never see another merchant's payments, settlements,
-    or bank data, even if it tries to fetch an ID that happens to belong to
-    someone else (section 12: tools must validate inputs / no unrestricted access).
-    """
 
     def __init__(self, db: AsyncSession, merchant_account_id: uuid.UUID):
         self.db = db

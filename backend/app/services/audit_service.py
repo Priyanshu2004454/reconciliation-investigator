@@ -1,10 +1,3 @@
-"""
-Every meaningful state change in the system goes through this module.
-This is intentionally the ONLY place that writes to `audit_logs`, so the
-audit trail can't accidentally be bypassed by a route or service forgetting
-to log something.
-"""
-
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -17,7 +10,7 @@ from app.models.audit import AuditLog
 async def log_action(
     db: AsyncSession,
     *,
-    actor_type: str,  # "AI" | "HUMAN" | "SYSTEM"
+    actor_type: str,  
     action: str,
     case_id: Optional[uuid.UUID] = None,
     actor_id: Optional[str] = None,
@@ -36,5 +29,5 @@ async def log_action(
         created_at=datetime.utcnow(),
     )
     db.add(entry)
-    await db.flush()  # get entry.id without committing the whole transaction yet
+    await db.flush()
     return entry

@@ -1,17 +1,3 @@
-"""
-Bank statement CSV import.
-
-Different banks name their columns differently (see section 6 of the spec).
-This module:
-  1. detects which CSV column maps to which internal field,
-  2. validates the file has enough information to be usable,
-  3. normalizes every row into a consistent internal shape,
-  4. flags empty/duplicate/malformed rows instead of silently dropping them.
-
-Nothing here talks to the database — it returns plain data structures that
-the API layer persists. Keeps the parsing logic independently testable.
-"""
-
 import hashlib
 import io
 import re

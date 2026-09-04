@@ -1,13 +1,3 @@
-"""
-Persists app.services.demo_dataset's synthetic dataset into the database
-under a dedicated demo merchant account. Idempotent: every entity is keyed
-by a deterministic external ID (pay_demo0001, setl_demo0001, ...), so
-re-running this updates existing rows instead of creating duplicates.
-
-Run with:
-    python -m app.seed_demo
-"""
-
 import asyncio
 import uuid
 from datetime import date, datetime, timezone

@@ -1,23 +1,3 @@
-"""
-Razorpay webhook handling (section 5).
-
-Two guarantees this module exists to provide:
-  1. Signature verification — we never trust a webhook body we can't verify
-     came from Razorpay (HMAC-SHA256 over the raw request body, using the
-     dashboard-configured webhook secret).
-  2. Idempotency — Razorpay may deliver the same event more than once (retries
-     on timeout, etc). Processing the same event_id twice must never create
-     duplicate payment/settlement/refund rows.
-
-KNOWN LIMITATION (documented per section 37): this MVP resolves incoming
-webhooks to the first merchant_account row in the database rather than a
-per-merchant webhook secret/routing table, since multi-merchant webhook
-routing needs Razorpay's Connected Accounts (out of scope per section 30 —
-"complex banking integrations" / multi-merchant is explicitly future roadmap
-in section 35). Single-merchant Test Mode deployments — which is what this
-buildathon MVP targets — are unaffected by this simplification.
-"""
-
 import hashlib
 import hmac
 import time
@@ -43,15 +23,12 @@ class WebhookSignatureError(Exception):
 class WebhookProcessingResult(BaseModel):
     event_id: str
     event_type: str
-    status: str  # WebhookProcessingStatus
+    status: str  
     message: str
 
 
 def verify_signature(raw_body: bytes, signature: str) -> bool:
-    """
-    Razorpay signs webhooks as hex(hmac_sha256(webhook_secret, raw_body)).
-    Uses constant-time comparison to avoid timing attacks.
-    """
+    
     settings = get_settings()
     if not signature:
         return False
@@ -62,12 +39,7 @@ def verify_signature(raw_body: bytes, signature: str) -> bool:
 
 
 def _derive_event_id(payload: dict, raw_body: bytes) -> str:
-    """
-    Razorpay webhook payloads don't always carry a top-level unique event id
-    depending on the event/version. Fall back to a content hash so every
-    distinct delivery still gets a stable idempotency key, and identical
-    redeliveries (retries) hash to the same key.
-    """
+    
     explicit_id = payload.get("id")
     if explicit_id:
         return str(explicit_id)
@@ -167,7 +139,7 @@ async def process_webhook(db: AsyncSession, payload: dict, raw_body: bytes) -> W
     ).scalar_one_or_none()
 
     if existing_event is not None:
-        # Idempotency: same event delivered again (Razorpay retry) — never reprocess.
+        
         return WebhookProcessingResult(
             event_id=event_id, event_type=event_type, status="DUPLICATE",
             message="Event already processed; skipped to avoid duplicate records.",
@@ -226,7 +198,7 @@ async def process_webhook(db: AsyncSession, payload: dict, raw_body: bytes) -> W
             message=f"Applied {event_type} to {entity_kind} {entity_payload.get('id')}.",
         )
 
-    except Exception as exc:  # noqa: BLE001 — never let one bad webhook crash the app (section 24)
+    except Exception as exc:  
         webhook_row.processing_status = "FAILED"
         webhook_row.error_message = str(exc)
         webhook_row.processed_at = datetime.utcnow()

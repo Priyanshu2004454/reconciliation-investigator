@@ -1,10 +1,3 @@
-"""
-Bridges the pure, DB-agnostic reconciliation engine (app.services.reconciliation_engine)
-to actual database rows. The engine itself never touches SQLAlchemy — this module
-is what turns its CaseResult objects into ReconciliationRun / ReconciliationCase
-rows and writes the corresponding audit trail.
-"""
-
 import uuid
 from datetime import datetime
 

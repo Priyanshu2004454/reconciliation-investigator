@@ -75,14 +75,14 @@ async function request<T>(
   return body as T;
 }
 
-// ── Health (no /api/v1 prefix, no auth) ──────────────────────────────────
+
 export async function getHealth(): Promise<HealthCheck> {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) throw new ApiError(res.status, "Backend health check failed");
   return res.json();
 }
 
-// ── Auth ─────────────────────────────────────────────────────────────────
+
 export function register(email: string, password: string, full_name: string) {
   return request<TokenResponse>(
     "/auth/register",
@@ -99,7 +99,7 @@ export function login(email: string, password: string) {
   );
 }
 
-// ── Merchant accounts ────────────────────────────────────────────────────
+
 export function getMyMerchantAccount() {
   return request<MerchantAccount | null>("/merchant-accounts/me");
 }
@@ -115,12 +115,12 @@ export function createMerchantAccount(
   });
 }
 
-// ── Razorpay sync ────────────────────────────────────────────────────────
+
 export function syncRazorpayData() {
   return request<SyncResult[]>("/razorpay/sync", { method: "POST" });
 }
 
-// ── Bank statements ──────────────────────────────────────────────────────
+
 export function uploadBankStatement(file: File) {
   const formData = new FormData();
   formData.append("file", file);
@@ -131,7 +131,7 @@ export function uploadBankStatement(file: File) {
   );
 }
 
-// ── Reconciliation ───────────────────────────────────────────────────────
+
 export function seedDemoData() {
   return request<DemoSeedResponse>("/reconciliation/seed-demo", { method: "POST" });
 }
@@ -152,10 +152,7 @@ export function getCase(caseId: string) {
   return request<ReconciliationCaseDetail>(`/reconciliation/cases/${caseId}`);
 }
 
-// Real, already-tested backend endpoints (Track 04 batch reconciliation) that
-// this frontend fork hadn't wired up yet -- added here (read-only GETs) so
-// the Overview dashboard can show real run history and exceptions instead
-// of inventing chart data.
+
 export function listReconciliationRuns(limit = 10) {
   return request<ReconciliationRun[]>(`/reconciliation/runs?limit=${limit}`);
 }
@@ -165,7 +162,7 @@ export function listExceptions(runId?: string) {
   return request<ExceptionCase[]>(`/reconciliation/exceptions${qs}`);
 }
 
-// ── AI Copilot ──────────────────────────────────────────────────────────
+
 export function copilotChat(message: string, history: { role: "user" | "assistant"; text: string }[]) {
   return request<CopilotChatResponse>("/copilot/chat", {
     method: "POST",
@@ -173,7 +170,7 @@ export function copilotChat(message: string, history: { role: "user" | "assistan
   });
 }
 
-// ── Investigations ───────────────────────────────────────────────────────
+
 export function getLatestInvestigation(caseId: string) {
   return request<Investigation | null>(`/investigations/cases/${caseId}`);
 }
@@ -189,7 +186,7 @@ export function submitDecision(investigationId: string, decision: string, notes?
   });
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────
+
 export function getDashboardSummary() {
   return request<DashboardSummary>("/dashboard/summary");
 }
@@ -202,7 +199,6 @@ export function getMismatchBreakdown() {
   return request<MismatchCategoryBreakdown[]>("/dashboard/mismatch-breakdown");
 }
 
-// ── Audit log ─────────────────────────────────────────────────────────────
 export function listAuditLogs(caseId?: string, limit = 100) {
   const params = new URLSearchParams();
   if (caseId) params.set("case_id", caseId);

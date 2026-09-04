@@ -1,17 +1,4 @@
-"""
-AI Copilot tools -- read-only, merchant-scoped database queries the Copilot
-can call to ground its answers in real data. This intentionally reuses the
-same models the reconciliation engine and Investigator already use (no
-duplicated database logic), and follows the exact same architectural
-pattern as app/ai/tools.py + app/ai/db_data_store.py: every tool is scoped
-to one merchant_account_id, so the Copilot can never see another
-merchant's data even if it tries.
 
-Every tool result is tracked as a "source" by the orchestrator (app/ai/copilot.py)
-so the frontend can show a small evidence chip (e.g. "Source: Case #0091") --
-the Copilot is never allowed to state a financial fact that didn't come from
-one of these tool calls.
-"""
 
 import uuid
 from typing import Any, Optional

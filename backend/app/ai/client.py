@@ -1,10 +1,3 @@
-"""
-AI Client & Provider Factory.
-
-Instantiates either the Google Gemini provider (via google-genai) or Anthropic Claude
-provider based on AI_PROVIDER setting.
-"""
-
 from typing import Any
 from app.core.config import get_settings
 from app.ai.providers import BaseAIProvider, GeminiAIProvider, AnthropicAIProvider
@@ -22,13 +15,13 @@ def get_ai_provider() -> BaseAIProvider:
         key = (settings.GEMINI_API_KEY or "").strip()
         if not key or key.startswith("AIzaSy-placeholder") or key.startswith("your-") or key.startswith("xxx"):
             raise AIClientNotConfiguredError(
-                "AI Investigator is not configured for Gemini. Add GEMINI_API_KEY to backend/.env and restart the backend."
+                
             )
         try:
             from google import genai
         except ImportError as exc:
             raise AIClientNotConfiguredError(
-                "google-genai SDK is not installed. Install it with: pip install google-genai"
+                
             ) from exc
 
         client = genai.Client(api_key=key)
@@ -39,13 +32,13 @@ def get_ai_provider() -> BaseAIProvider:
         key = (settings.ANTHROPIC_API_KEY or "").strip()
         if not key or key.startswith("sk-ant-xxx") or key.startswith("your-") or key.startswith("xxx"):
             raise AIClientNotConfiguredError(
-                "AI Investigator is not configured for Anthropic. Add ANTHROPIC_API_KEY to backend/.env and restart the backend."
+                
             )
         try:
             from anthropic import AsyncAnthropic
         except ImportError as exc:
             raise AIClientNotConfiguredError(
-                "anthropic SDK is not installed. Install it with: pip install anthropic"
+                
             ) from exc
 
         client = AsyncAnthropic(api_key=key)
@@ -59,5 +52,5 @@ def get_ai_provider() -> BaseAIProvider:
 
 
 def get_ai_client() -> Any:
-    """Legacy helper for backward compatibility."""
+    
     return get_ai_provider()

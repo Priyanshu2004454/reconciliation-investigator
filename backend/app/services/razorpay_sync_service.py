@@ -1,9 +1,3 @@
-"""
-Orchestrates: razorpay_service (fetch raw data) -> normalization (convert units)
--> upsert into Postgres. Idempotent — re-running a sync updates existing rows
-by their unique razorpay_*_id rather than creating duplicates.
-"""
-
 import time
 import uuid
 

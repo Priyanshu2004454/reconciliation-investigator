@@ -1,14 +1,3 @@
-"""
-Razorpay service layer.
-
-This is the ONLY module in the codebase allowed to talk to Razorpay's API.
-Everything else (routes, reconciliation engine, AI investigator) goes through
-these functions, never the SDK directly.
-
-RAZORPAY_KEY_SECRET is read once from settings and never logged, returned,
-or passed to the frontend.
-"""
-
 import time
 import logging
 from datetime import datetime
@@ -33,8 +22,7 @@ from app.services.exceptions import (
 
 logger = logging.getLogger("razorpay_service")
 
-PAGE_SIZE = 100  # Razorpay's max per page for list endpoints
-
+PAGE_SIZE = 100
 
 def _get_client() -> razorpay.Client:
     settings = get_settings()
@@ -70,10 +58,7 @@ def _handle_sdk_error(exc: Exception, context: str) -> None:
 
 
 def _paginate(fetch_page_fn, entity_name: str, max_pages: int = 50) -> list[dict]:
-    """
-    Generic pagination helper for Razorpay list endpoints, which use
-    skip/count style pagination and return {"count": N, "items": [...]}.
-    """
+
     all_items: list[dict] = []
     skip = 0
     pages_fetched = 0
@@ -101,7 +86,6 @@ def _paginate(fetch_page_fn, entity_name: str, max_pages: int = 50) -> list[dict
     return all_items
 
 
-# ── Payments ─────────────────────────────────────────────────────────────
 
 def fetch_payments(from_ts: Optional[int] = None, to_ts: Optional[int] = None) -> list[dict]:
     """Fetch all payments, optionally within a unix-timestamp window."""
@@ -129,7 +113,6 @@ def fetch_payment(payment_id: str) -> dict:
         _handle_sdk_error(exc, context=f"fetching payment {payment_id}")
 
 
-# ── Orders ───────────────────────────────────────────────────────────────
 
 def fetch_orders(from_ts: Optional[int] = None, to_ts: Optional[int] = None) -> list[dict]:
     client = _get_client()
@@ -155,7 +138,6 @@ def fetch_order(order_id: str) -> dict:
         _handle_sdk_error(exc, context=f"fetching order {order_id}")
 
 
-# ── Settlements ──────────────────────────────────────────────────────────
 
 def fetch_settlements(from_ts: Optional[int] = None, to_ts: Optional[int] = None) -> list[dict]:
     client = _get_client()
@@ -181,7 +163,6 @@ def fetch_settlement(settlement_id: str) -> dict:
         _handle_sdk_error(exc, context=f"fetching settlement {settlement_id}")
 
 
-# ── Refunds ──────────────────────────────────────────────────────────────
 
 def fetch_refunds(from_ts: Optional[int] = None, to_ts: Optional[int] = None) -> list[dict]:
     client = _get_client()
@@ -209,14 +190,9 @@ def fetch_payment_refunds(payment_id: str) -> list[dict]:
     return _paginate(fetch_page, f"refunds for payment {payment_id}")
 
 
-# ── Retry wrapper (used for flaky network conditions) ──────────────────
 
 def with_retries(fn, *args, max_attempts: int = 3, backoff_seconds: float = 1.5, **kwargs):
-    """
-    Wraps a service call with exponential backoff. Only retries on transient
-    errors (timeout, rate limit, server error) — never on auth or not-found,
-    since retrying those just wastes time and hides the real problem.
-    """
+
     last_exc: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
@@ -230,6 +206,6 @@ def with_retries(fn, *args, max_attempts: int = 3, backoff_seconds: float = 1.5,
                             attempt, max_attempts, exc, wait)
             time.sleep(wait)
         except RazorpayServiceError:
-            raise  # non-transient — don't retry (auth error, not found, malformed response)
+            raise  
 
-    raise last_exc  # type: ignore[misc]
+    raise last_exc 

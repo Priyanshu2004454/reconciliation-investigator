@@ -1,14 +1,3 @@
-"""
-Tool definitions for the AI Investigator. Each tool is read-only against the
-case being investigated, except mark_case_for_review, which only ever
-*flags* a case — it can never resolve, dismiss, or silently close one.
-
-Every tool call is validated and logged (the caller — investigator.py —
-records which real IDs were fetched, which is later used to reject any
-evidence in the AI's final answer that references an ID it never actually
-retrieved).
-"""
-
 from typing import Any
 
 from app.ai.data_store import InvestigationDataStore

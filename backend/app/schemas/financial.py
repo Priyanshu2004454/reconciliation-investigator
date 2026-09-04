@@ -5,11 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class NormalizedRecord(BaseModel):
-    """
-    Common shape every source (Razorpay payment/order/refund/settlement, bank row)
-    gets mapped into before the reconciliation engine touches it. Keeps the engine
-    from ever having to know about Razorpay's or a bank's raw field names.
-    """
+    
     model_config = ConfigDict(from_attributes=True)
 
     internal_id: Optional[str] = None

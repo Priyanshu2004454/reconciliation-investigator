@@ -1,15 +1,3 @@
-"""
-Typed inputs/outputs for the deterministic reconciliation engine.
-
-The engine treats a Razorpay *settlement* as the anchor of each case, since
-the settlement is what actually carries a UTR and therefore what a bank
-credit can be matched against. Each settlement can have one or more
-underlying payments linked to it (in Razorpay's real model, one settlement
-batches many payments; for this MVP we accept an explicit `payment_ids`
-link per settlement rather than reconstructing Razorpay's internal batching,
-which is out of scope per section 30 of the spec).
-"""
-
 from datetime import date, datetime
 from typing import Optional
 
@@ -39,11 +27,11 @@ class SettlementInput(BaseModel):
     tax: float = 0.0
     status: str = "processed"
     settlement_date: date
-    payment_ids: list[str] = []  # payments this settlement is understood to cover
+    payment_ids: list[str] = []  
 
 
 class BankRowInput(BaseModel):
-    id: str  # internal bank_transactions.id (or a temp key pre-persist)
+    id: str  
     transaction_date: date
     reference_id: Optional[str] = None
     utr: Optional[str] = None
@@ -60,9 +48,9 @@ class CaseResult(BaseModel):
     actual_amount: Optional[float] = None
     difference: Optional[float] = None
 
-    status: str  # ReconciliationStatus
-    match_rule: str  # which rule (1-6) resolved this case
-    root_cause: Optional[str] = None  # RootCauseCategory, set when EXPLAINED/NEEDS_REVIEW
+    status: str  
+    match_rule: str  
+    root_cause: Optional[str] = None  
     notes: str = ""
 
 

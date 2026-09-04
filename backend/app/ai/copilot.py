@@ -1,16 +1,3 @@
-"""
-AI Copilot orchestrator. Structurally the same tool-use discipline as
-app/ai/investigator.py (same AIProviderClient interface, same "final answer
-only via a submit tool" pattern for reliable structured output) but
-generalized for open-ended, multi-turn conversation instead of a single
-case investigation.
-
-Grounding guarantee: the Copilot can only reference case_ids/run_ids that a
-tool call actually returned during this conversation turn. Anything else in
-its final answer is text-only commentary, never a specific ID or amount
-that wasn't tool-verified.
-"""
-
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -19,7 +6,7 @@ import json
 from app.ai.copilot_tools import COPILOT_TOOL_SPECS, CopilotDataStore, execute_copilot_tool, CopilotToolExecutionError
 from app.core.config import get_settings
 
-SYSTEM_PROMPT = """You are the AI Copilot inside a Razorpay reconciliation product. You answer
+SYSTEM_PROMPT = """You are the AI Copilot inside a  reconciliation application. You answer
 questions about the merchant's real reconciliation data using the tools provided.
 
 Rules:
@@ -122,11 +109,7 @@ async def run_copilot_turn(
     client: Any,
     max_tool_iterations: int = 8,
 ) -> CopilotResult:
-    """
-    `history` is [{"role": "user"|"assistant", "text": str}, ...] from prior
-    turns in this Copilot session -- the frontend keeps and resends it,
-    the same way any stateless chat API works.
-    """
+    
     settings = get_settings()
     start = time.monotonic()
 

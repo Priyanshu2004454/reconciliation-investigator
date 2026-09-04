@@ -1,12 +1,3 @@
-"""
-Central application configuration.
-
-Loads all settings from environment variables (.env file locally, real env vars
-in production). NEVER hardcode secrets here. RAZORPAY_KEY_SECRET and
-ANTHROPIC_API_KEY must only ever be read on the backend and must never be
-serialized into any response sent to the frontend.
-"""
-
 from functools import lru_cache
 from typing import List
 
@@ -22,39 +13,32 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── App ──────────────────────────────────────────
     APP_ENV: str = "development"
     APP_SECRET_KEY: str
     API_V1_PREFIX: str = "/api/v1"
     CORS_ORIGINS: str = "http://localhost:3000"
 
-    # ── Database ─────────────────────────────────────
     DATABASE_URL: str
     DATABASE_URL_SYNC: str
 
-    # ── Razorpay ─────────────────────────────────────
     RAZORPAY_KEY_ID: str
     RAZORPAY_KEY_SECRET: str
     RAZORPAY_WEBHOOK_SECRET: str
 
-    # ── AI ───────────────────────────────────────────
-    AI_PROVIDER: str = "gemini"  # "gemini" | "anthropic"
+    AI_PROVIDER: str = "gemini"  
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
-    AI_MODEL: str = ""  # If empty, defaults to gemini-2.5-flash or claude-sonnet-4-6 based on provider
+    AI_MODEL: str = ""  
     AI_MAX_TOKENS: int = 2000
     AI_TIMEOUT_SECONDS: int = 30
 
-    # ── Auth ─────────────────────────────────────────
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1440
 
-    # ── Reconciliation Engine ────────────────────────
     MATCH_DATE_WINDOW_DAYS: int = 3
     MATCH_AMOUNT_TOLERANCE_PAISE: int = 100
 
-    # ── Rate limiting ────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 60
 
     @property

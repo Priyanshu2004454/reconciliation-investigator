@@ -1,11 +1,3 @@
-"""
-Evaluation suite (section 11/26 of the spec). Measures the deterministic
-reconciliation engine's accuracy against the 100-record synthetic dataset's
-known ground truth. This is a real, calculated measurement -- no accuracy
-number is claimed anywhere else in this codebase without a test like this
-backing it up.
-"""
-
 import pytest
 
 from app.services.demo_dataset import generate_dataset, CATEGORY_TARGET_COUNTS

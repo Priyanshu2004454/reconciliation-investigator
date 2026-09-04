@@ -9,7 +9,7 @@ from app.db.base import Base
 
 
 class ReconciliationRun(Base):
-    """One execution of the deterministic reconciliation engine."""
+    
     __tablename__ = "reconciliation_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -24,17 +24,12 @@ class ReconciliationRun(Base):
     total_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
     matched_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
     unresolved_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
-    match_rate: Mapped[float] = mapped_column(default=0.0)  # percentage, e.g. 92.0
-    status: Mapped[str] = mapped_column(String(32), default="RUNNING")  # RUNNING | COMPLETED | FAILED
+    match_rate: Mapped[float] = mapped_column(default=0.0)  
+    status: Mapped[str] = mapped_column(String(32), default="RUNNING")  
 
 
 class ReconciliationCase(Base):
-    """
-    A single reconciliation unit — typically one payment/settlement pair being
-    checked against bank data. This is the deterministic engine's output;
-    the AI never writes to `status` directly without a corresponding
-    investigation + evidence trail.
-    """
+    
     __tablename__ = "reconciliation_cases"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -49,22 +44,22 @@ class ReconciliationCase(Base):
     actual_amount: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
     difference: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # ReconciliationStatus
-    match_rule: Mapped[str | None] = mapped_column(String(64), nullable=True)  # which deterministic rule matched
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  
+    match_rule: Mapped[str | None] = mapped_column(String(64), nullable=True)  
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Investigation(Base):
-    """AI investigation output for a reconciliation case. Structured, not free-form."""
+    
     __tablename__ = "investigations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("reconciliation_cases.id"), nullable=False, index=True)
 
-    classification: Mapped[str] = mapped_column(String(32), nullable=False)  # ReconciliationStatus
-    root_cause: Mapped[str] = mapped_column(String(64), nullable=False)      # RootCauseCategory
+    classification: Mapped[str] = mapped_column(String(32), nullable=False)  
+    root_cause: Mapped[str] = mapped_column(String(64), nullable=False)      
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     recommended_action: Mapped[str] = mapped_column(Text, nullable=False)
@@ -83,18 +78,14 @@ class Investigation(Base):
 
 
 class InvestigationEvidence(Base):
-    """
-    Individual, atomic pieces of evidence the AI used to reach its conclusion.
-    Every evidence row must trace back to a real fetched record (payment,
-    settlement, refund, or bank row) — never a fabricated fact.
-    """
+    
     __tablename__ = "investigation_evidence"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     investigation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("investigations.id"), nullable=False, index=True)
 
-    source_type: Mapped[str] = mapped_column(String(32), nullable=False)  # RecordSource
-    source_id: Mapped[str] = mapped_column(String(128), nullable=False)   # e.g. razorpay_payment_id
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)  
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False)   
     description: Mapped[str] = mapped_column(Text, nullable=False)
     data_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 

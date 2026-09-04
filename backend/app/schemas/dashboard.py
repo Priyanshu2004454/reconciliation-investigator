@@ -12,10 +12,10 @@ class DashboardSummary(BaseModel):
     explained_count: int
     needs_review_count: int
     resolved_count: int
-    reconciliation_rate: float  # percentage, e.g. 99.3
+    reconciliation_rate: float  
     amount_requiring_investigation: float
-    ai_investigation_rate: float  # % of NEEDS_REVIEW cases that have been investigated at least once
-    human_review_rate: float  # % of investigations that received a human decision
+    ai_investigation_rate: float  
+    human_review_rate: float  
     avg_investigation_time_ms: Optional[float] = None
     last_run_at: Optional[datetime] = None
     last_run_status: Optional[str] = None
@@ -58,7 +58,7 @@ class ExceptionCaseOut(BaseModel):
     razorpay_settlement_id: Optional[str] = None
     amount: Optional[float] = None
     status: str
-    mismatch_type: Optional[str] = None  # root_cause from latest investigation, if any
+    mismatch_type: Optional[str] = None  
     confidence: Optional[float] = None
     recommended_action: Optional[str] = None
     created_at: datetime

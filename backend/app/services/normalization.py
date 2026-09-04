@@ -1,17 +1,9 @@
-"""
-Converts raw Razorpay API objects into the internal NormalizedRecord shape
-defined in app.schemas.financial. The reconciliation engine only ever touches
-normalized records — never raw Razorpay dicts — so it stays agnostic to
-whatever Razorpay's API happens to name a field this year.
-"""
-
 from datetime import datetime, timezone
 
 from app.schemas.financial import NormalizedRecord
 
 
 def paise_to_rupees(amount_paise: int | None) -> float:
-    """Razorpay amounts are in paise (smallest currency unit). Convert to rupees."""
     if amount_paise is None:
         return 0.0
     return round(amount_paise / 100, 2)
@@ -23,7 +15,6 @@ def unix_to_datetime(ts: int | None) -> datetime:
     return datetime.fromtimestamp(ts, tz=timezone.utc)
 
 
-# Internal aliases kept for backward compatibility within this module.
 _paise_to_rupees = paise_to_rupees
 _unix_to_datetime = unix_to_datetime
 
@@ -36,7 +27,7 @@ def normalize_payment(raw: dict) -> NormalizedRecord:
         currency=raw.get("currency", "INR"),
         date=_unix_to_datetime(raw.get("created_at")),
         reference_id=raw.get("order_id"),
-        utr=None,  # payments don't carry a UTR — settlements do
+        utr=None, 
         status=raw.get("status", "unknown"),
         metadata={
             "method": raw.get("method"),
@@ -94,11 +85,6 @@ def normalize_settlement(raw: dict) -> NormalizedRecord:
 
 
 def normalize_bank_row(row: dict) -> NormalizedRecord:
-    """
-    `row` here is already the *cleaned* internal dict produced by the CSV
-    normalization layer (app.services.bank_statement_parser), i.e. it already
-    has keys: transaction_date, description, reference_id, utr, credit, debit, balance.
-    """
     credit = row.get("credit") or 0.0
     debit = row.get("debit") or 0.0
     amount = credit if credit else -debit

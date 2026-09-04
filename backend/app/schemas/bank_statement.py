@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 class BankRowError(BaseModel):
-    row_number: int  # 1-indexed, matches what a human sees in Excel/CSV
+    row_number: int  
     reason: str
     raw_row: dict
 
@@ -18,7 +18,7 @@ class ImportSummary(BaseModel):
     rows_rejected: int
     rows_duplicated: int
     rows_requiring_review: int
-    detected_columns: dict[str, str]  # our internal field -> original CSV column name
+    detected_columns: dict[str, str]  
     errors: list[BankRowError] = []
 
 
